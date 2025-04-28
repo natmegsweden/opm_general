@@ -46,14 +46,15 @@ params.filter.lp_freq = 100;
 params.filter.bp_freq = [];
 params.filter.notch = sort([50:50:150 60:60:120]);
 params.n_comp = 40;
+params.manual_ica = false;
 params.ica_cor = 0.8; % cutoff for EOG/ECG coherence
 params.ica_coh = 0.95; % cutoff for EOG/ECG coherence
+params.save_ica = 1; % save plots and components
 params.z_threshold = 20;
 params.corr_threshold = 0.7; % correlation threshold for badchannel neighbors
 params.opm_std_threshold = 2.5e-12;
 params.hpi_freq = 33;
 params.hpi_gof = 0.9;
-params.save_ica = 1; % save plots and components
 
 params.trigger_codes = [1 2 3 4 5 6];
 params.trigger_labels = {'D', 'P', 'T', 'F', 'O', 'G'};
@@ -251,6 +252,11 @@ for i_ses = 1:length(ses)
     end
     close all
 end
+
+%% clear and close all, then exit to free memory
+close all
+clear all
+exit
 
 %% Functions
 function files = findOpmFiles(directory, pattern)
