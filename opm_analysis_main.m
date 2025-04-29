@@ -87,8 +87,8 @@ for i_ses = 1:length(ses)
        mkdir(fullfile(save_path,'figs'))
     end
     for i_paradigm = 1:length(paradigms)
-        opm_files = fullfile(raw_path,'osmeg',[paradigms{i_paradigm} 'OPM_raw.fif']); % opm files 
-        aux_files = fullfile(raw_path,'meg',[paradigms{i_paradigm} 'EEG.fif']); % corresponding aux files containing EOG/ECG
+        opm_files{i_paradigm} = fullfile(raw_path,'osmeg',[paradigms{i_paradigm} 'OPM_raw.fif']); % opm files 
+        aux_files{i_paradigm} = fullfile(raw_path,'meg',[paradigms{i_paradigm} 'EEG.fif']); % corresponding aux files containing EOG/ECG
     end
     hpi_path = fullfile(raw_path,'osmeg');
     mri_path = '/Volumes/dataarchvie/23106_opmbci/NatMEG_0953/mri/';
@@ -129,6 +129,7 @@ for i_ses = 1:length(ses)
             [cfg,badtrl_std] = ft_badsegment(cfg, data_epo);
             data_epo = ft_rejectartifact(cfg,data_epo);
 
+            % Remove bad trials
             [~,idx]=ismember(data_epo.sampleinfo,badtrl_jump,'rows');
             badtrl_jump = find(idx);
             [~,idx]=ismember(data_epo.sampleinfo,badtrl_std,'rows');
@@ -139,6 +140,10 @@ for i_ses = 1:length(ses)
             
             % ICA
             disp('Running ICA ...')
+            if sum(contains(data_ica.label,'EOG'))<1 || sum(contains(data_ica.label,'ECG'))<1 % No ExG data
+                params.manual_ica = 1;
+                params.save_ica = 1;
+            end
             data_ica = ica_MEG(data_epo, save_path, params);
             save(fullfile(save_path, [params.paradigm '_data_ica']), 'data_ica',"-v7.3"); disp('done');
         end
