@@ -1,4 +1,4 @@
-function [badchs, badchs_flat, badchs_std, badchs_neighbors, badchs_outlier] = opm_badchannels(data, trl, params)
+function [badchs, badchs_flat, badchs_std, badchs_neighbors, badchs_outlier] = opm_badchannels(data, trl_opm, params)
 %opm_badchannels Detects channels that are flat, have low correlation with
 %thei_chs_gradeighbors or show a lot of jumping artifacts.
 %   cfg.z_threshold
@@ -6,11 +6,12 @@ function [badchs, badchs_flat, badchs_std, badchs_neighbors, badchs_outlier] = o
 %   cfg.n_neighbors
 %   cfg.njump_threshold
 
-std_threshold = ft_getopt(params, 'std_threshold', 5e-9);
 n_neighbors     = ft_getopt(params, 'n_neighbors', 4);
 corr_threshold  = ft_getopt(params, 'corr_threshold', 0.6);
 z_threshold     = ft_getopt(params, 'z_threshold', 20);
 njump_threshold = ft_getopt(params, 'njump_threshold', 0.05);
+std_threshold = ft_getopt(params, 'std_threshold', 5e-9);
+trl_opm         = ft_getopt(params, 'trl');
 
 cfg = [];
 cfg.channel = '*bz';
@@ -65,7 +66,7 @@ badchs = [badchs_flat; badchs_std; badchs_neighbors];
 
 %% Epoch
 cfg = [];
-cfg.trl = trl;
+cfg.trl = trl_opm;
 data_epo = ft_redefinetrial(cfg,data);
 cfg = [];
 cfg.demean = 'yes';

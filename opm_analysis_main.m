@@ -29,8 +29,8 @@ ft_default.showcallinfo = 'no';
 
 %% Overwrite
 overwrite = [];
-overwrite.read = true;
 overwrite.preproc = true;
+overwrite.timelock = true;
 overwrite.mri = false;
 overwrite.coreg = false;
 overwrite.sourcerec = false;
@@ -98,19 +98,59 @@ for i_ses = 1:length(ses)
         params.paradigm = paradigms{i_paradigm};
         
         %% Read and preproc
-        if overwrite.read == true
-            % Read data and reject bad channels
-            disp(['Reading file: ' num2str(i_file) '/' num2str(length(i_paradigm)) '...'])
+        if overwrite.preproc == true || ~exist(fullfile(save_path, [params.paradigm '_data_ica.mat']),'file')
             ft_hastoolbox('mne', 1);
-            data = read_osMEG(opm_files{i_file}, aux_files{i_file}, save_path, params); % Read data
-            save(fullfile(save_path, [params.sub '_' params.paradigm '_data']), 'data',"-v7.3"); disp('done');
-        end
 
-        if overwrite.preproc == true
+            % Read data 
+            disp(['Reading file: ' num2str(i_file) '/' num2str(length(i_paradigm)) '...'])
+            data_epo = read_osMEG(opm_files{i_file}, aux_files{i_file}, save_path, params); % Read data
+            
+            % Reject bad channels
+            cfg = [];
+            cfg.channel = setdiff(data_epo.label,badchs_opm);
+            data_epo = ft_selectdata(cfg, data_epo);
+
+            % Reject jump trials
+            cfg = [];
+            cfg.channel = {'*bz'};
+            cfg.metric = 'maxzvalue';
+            cfg.preproc.medianfilter  = 'yes';
+            cfg.preproc.medianfiltord  = 9;
+            cfg.preproc.absdiff       = 'yes';
+            cfg.threshold = params.z_threshold;
+            [cfg,badtrl_jump] = ft_badsegment(cfg, data_epo);
+            data_epo = ft_rejectartifact(cfg,data_epo);
+            
+            % Reject noisy trials
+            cfg = [];
+            cfg.channel = {'*bz'};
+            cfg.metric = 'std';
+            cfg.threshold = params.opm_std_threshold;
+            [cfg,badtrl_std] = ft_badsegment(cfg, data_epo);
+            data_epo = ft_rejectartifact(cfg,data_epo);
+
+            [~,idx]=ismember(data_epo.sampleinfo,badtrl_jump,'rows');
+            badtrl_jump = find(idx);
+            [~,idx]=ismember(data_epo.sampleinfo,badtrl_std,'rows');
+            badtrl_std = find(idx);
+            save(fullfile(save_path, [params.paradigm '_badtrls']), ...
+                'badtrl_jump', ...
+                'badtrl_std', "-v7.3"); 
+            
             % ICA
             disp('Running ICA ...')
-            data_ica = ica_MEG(data, save_path, params);
-            save(fullfile(save_path, [params.sub '_' params.paradigm '_data_ica']), 'data_ica',"-v7.3"); disp('done');
+            data_ica = ica_MEG(data_epo, save_path, params);
+            save(fullfile(save_path, [params.paradigm '_data_ica']), 'data_ica',"-v7.3"); disp('done');
+        end
+
+        if overwrite.timelock == true || ~exist(fullfile(save_path, [params.paradigm '_timelocked.mat']),'file')
+            params.modality = 'opm';
+            params.layout = 'fieldlinebeta2bz_helmet.mat';
+            params.chs = '*bz';
+            params.amp_scaler = 1e15;
+            params.amp_label = 'B [fT]';
+            timelock(data_ica,params);
+            save(fullfile(save_path, [params.paradigm '_timelocked']), 'timelocked', '-v7.3'); 
         end
     end
     
@@ -157,7 +197,7 @@ for i_ses = 1:length(ses)
     %% HPI localization
     ft_hastoolbox('mne',1);
     
-    if overwrite.coreg==true
+    if overwrite.coreg==true 
         ft_hastoolbox('mne', 1);
         params.include_chs = load(fullfile(save_path, ['include_chs' num2str(length(opm_files))])).include_chs;
         %data_ica = load(fullfile(save_path, [params.sub '_' params.modality '_auditory' num2str(i_file) '.mat'])).data_ica;

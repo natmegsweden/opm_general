@@ -1,4 +1,4 @@
-function [data, badchs] = read_osMEG(opm_file, aux_file, save_path, params)
+function [data] = read_osMEG(opm_file, aux_file, save_path, params)
 %prprocess_osMEG Read on-scalp MEG data for benchmarking
 % recordings and combine with auxiliary TRIUX data/EEG. 
 % Requires the following arguments:
@@ -129,12 +129,26 @@ for i = 1:length(data.trial)
 end
 
 %% Find bad opm channels
-[badchs, badchs_flat, badchs_std, badchs_neighbors, badchs_outlier] = opm_badchannels(opm_raw, trl_opm, params);
-save(fullfile(save_path, [params.paradigm '_badchs']), ...
-    'badchs_flat', ...
-    'badchs_std', ...
-    'badchs_neighbors', ...
-    'badchs_outlier',"-v7.3"); 
+cfg = [];
+cfg.trl = trl_opm;
+cfg.z_threshold = params.z_threshold;
+cfg.corr_threshold = params.corr_threshold;
+[badchs_opm, badchs_opm_flat, badchs_opm_std, badchs_opm_neighbors, badchs_outlier] = opm_badchannels(cfg,opm_raw);
 clear opm_raw
+
+cfg = [];
+cfg.channel = setdiff(data.label,badchs_opm);
+data = ft_selectdata(cfg, data);
+
+
+%% Save 
+save(fullfile(save_path, [params.paradigm '_badchs']), ...
+    'badchs_opm_flat', ...
+    'badchs_opm_std', ...
+    'badchs_opm_neighbors', ...
+    'badchs_outlier',"-v7.3"); 
+
+%save(fullfile(save_path, [params.sub '_opm_cleaned']), 'opm_cleaned',"-v7.3");
+%save(fullfile(save_path, [params.sub '_opmeeg_cleaned']), 'opmeeg_cleaned',"-v7.3"); disp('done');
 
 end
