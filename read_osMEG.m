@@ -6,10 +6,17 @@ function [data, badchs] = read_osMEG(opm_file, aux_file, save_path, params)
 % Params: containing pre, post (pre- and poststim), and ds_freq 
 % (downsampling frequency).
 
+if ~exist(opm_file,'file')
+    error(['Did not find OPM file: ' opm_file])
+end
+
 if isempty(aux_file)
     opm_only = true;
 else
     opm_only = false;
+    if ~exist(aux_file,'file')
+        error(['Did not find AUX file: ' aux_file])
+    end
 end
 
 %% --- Read triggers ---
@@ -146,6 +153,9 @@ if ~opm_only
 else
     data = opm_epo_ds;
 end
+
+%% Convert to sensor definitions to cm
+data.grad = ft_convert_units(data.grad,'cm');
 
 %% Find bad opm channels
 [badchs, badchs_flat, badchs_std, badchs_neighbors, badchs_outlier] = opm_badchannels(opm_raw, trl_opm, params);

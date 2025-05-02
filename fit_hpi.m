@@ -5,9 +5,14 @@ function fit_hpi(hpi_path, aux_file, save_path, params)
 % Path: containing save_path and meg_file
 % Params: hpi_freq.
 
+if ~exist(aux_file,'file')
+    error(['Did not find aux file with headshape: ' aux_file])
+end
 
 hpi_files = dir(fullfile(hpi_path,'*HPI*_raw.fif'));
-
+if isempty(hpi_files)
+    error(['No HPI files found at path: ' hpi_path])
+end
 hpi = cell(length(hpi_files),1);
 
 for i_file = 1:length(hpi_files)

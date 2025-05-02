@@ -2,6 +2,14 @@ function prepare_mri(mri_file,meg_file,save_path)
 %UNTITLED2 Summary of this function goes here
 %   Detailed explanation goes here
 
+    if ~exist(mri_file,'file')
+        error(['Did not find MRI file: ' mri_file])
+    end
+
+    if ~exist(meg_file,'file')
+        error(['Did not find MEG file with headshape: ' meg_file])
+    end
+
     %% Read data
     headshape = ft_read_headshape(meg_file);
     grad    = ft_read_sens(meg_file,'senstype','meg'); % Load MEG sensors

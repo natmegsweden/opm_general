@@ -69,24 +69,27 @@ params.modality = 'opm';
 params.layout = 'fieldlinebeta2bz_helmet.mat';
 params.chs = '*bz';
 
-
-
 %% Subjects + dates
-sub = {'NatMEG_0953'};
+sub = {'NatMEG_0953'}; % List of subjects to loop through (semicolon separated)
 
-ses = {'250203'};
+ses = {'250203'}; % List of sessions; if multiple per subject define as: {'sub1_ses1' 'sub1_ses2'; 'sub2_ses1' 'sub2_ses2'};
 
 paradigms = {'RSEO'; 'RSEC'}; % Paradigms to analyze for all participants and sessions
 
 %%
 i_sub = 1;
-for i_ses = 1:length(ses)
+for i_ses = 1:length(ses(i_sub,:))
+    if isempty(ses{i_sub,i_ses})
+        disp(['No session defined! Skipping sub-' num2str(i_sub,'%02d') '_ses-' num2str(i_ses,'%02d')])
+        continue % Skip iteration if no session defined
+    end
+
     %% Loop over subjects
-    params.sub = ['sub_' num2str(i_sub,'%02d')];
-    params.ses = ['ses_' num2str(i_ses,'%02d')];
+    params.sub = ['sub-' num2str(i_sub,'%02d')];
+    params.ses = ['ses-' num2str(i_ses,'%02d')];
     
     %% Paths
-    raw_path = fullfile(base_data_path, sub{i_sub}, ses{i_ses});
+    raw_path = fullfile(base_data_path, sub{i_sub}, ses{i_sub,i_ses});
     save_path = fullfile(base_save_path, params.sub, params.ses);
     if ~exist(save_path, 'dir')
        mkdir(save_path)
@@ -161,24 +164,29 @@ for i_ses = 1:length(ses)
             end
             data_ica = ica_MEG(data_epo, save_path, params);
             save(fullfile(save_path, [params.paradigm '_data_ica']), 'data_ica',"-v7.3"); disp('done');
+            clear data_epo
+        else
+            data_ica = load(fullfile(save_path, [params.paradigm '_data_ica.mat'])).data_ica;
         end
-
+        
         if overwrite.timelock == true || ~exist(fullfile(save_path, [params.paradigm '_timelocked.mat']),'file')
             params.modality = 'opm';
             params.layout = 'fieldlinebeta2bz_helmet.mat';
             params.chs = '*bz';
             params.amp_scaler = 1e15;
             params.amp_label = 'B [fT]';
-            timelock(data_ica,params);
+            timelocked = timelock(data_ica,params);
             save(fullfile(save_path, [params.paradigm '_timelocked']), 'timelocked', '-v7.3'); 
+            clear timelocked
         end
+        clear data_ica
     end
     
     %% MRI
     ft_hastoolbox('mne',1);
     if overwrite.mri==true
         ft_hastoolbox('mne', 1);
-        prepare_mri_opmbci(mri_file,aux_files(1),save_path)
+        prepare_mri(mri_file,aux_files(1),save_path)
 
         % Read and transform cortical restrained source model
         files = dir(fullfile(mri_path,'workbench'));
@@ -212,6 +220,8 @@ for i_ses = 1:length(ses)
         sourcemodel = ft_transform_geometry(T, sourcemodel);
         sourcemodel.inside = true(size(sourcemodel.pos,1),1);
         save(fullfile(save_path, [params.sub '_sourcemodel']), 'sourcemodel', '-v7.3');
+
+        clear mri_resliced sourcemodel T atlas tmp aparc_L aparc_R filename filename2
     end
     
     %% HPI localization
@@ -221,7 +231,7 @@ for i_ses = 1:length(ses)
         ft_hastoolbox('mne', 1);
         params.include_chs = load(fullfile(save_path, ['include_chs' num2str(length(opm_files))])).include_chs;
         clear data_ica
-        opm_trans = fit_hpi_opmbci(hpi_path, aux_files{1}, save_path, params);
+        opm_trans = fit_hpi(hpi_path, aux_files{1}, save_path, params);
     
         for i_file = 1:length(opm_files)
             clear timelocked
@@ -255,7 +265,7 @@ for i_ses = 1:length(ses)
         saveas(h, fullfile(save_path, 'figs', 'opm_layout.jpg'))
         close all
     
-        clear timelocked mri_resliced opm_trans
+        clear timelocked sourcemodel headmodels opm_trans
     end
     
     %% MNE
@@ -305,8 +315,9 @@ for i_ses = 1:length(ses)
             time = data_ica.time{1};
             label = params.trigger_labels(data_ica.trialinfo-64);
             save(fullfile(save_path, ['motorimag_mne' num2str(i_file) '.mat']),'mne_inv','trial','time','label','pos','tri','roi','-v7.3');
-            clear mne_inv
+            clear mne_inv trial time label  data_ica
         end
+        clear pos tri roi sourcemodel headmodels mapping_matrix
     end
     close all
 end
