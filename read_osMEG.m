@@ -27,7 +27,7 @@ trl_opm(:,1) = find(trig)-(params.pre+params.pad)*opm_raw.fsample;
 trl_opm(:,2) = find(trig)+(params.post+params.pad)*opm_raw.fsample;
 trl_opm(:,3) = -(params.pre+params.pad)*opm_raw.fsample;
 trl_opm(:,4) = opm_raw.trial{1}(opm_trig,trig);
-trl_opm(:,1:2) = trl_opm(:,1:2) + floor(0.041*opm_raw.fsample); % adjust for stim delay
+trl_opm(:,1:2) = trl_opm(:,1:2) + floor(params.delay*opm_raw.fsample); % adjust for stim delay
 trl_opm = round(trl_opm);
 
 if ~opm_only
@@ -43,7 +43,7 @@ if ~opm_only
     trl_aux(:,2) = find(trig)+(params.post+params.pad)*aux_raw.fsample;
     trl_aux(:,3) = -(params.pre+params.pad)*aux_raw.fsample;
     trl_aux(:,4) = aux_raw.trial{1}(aux_trig,trig);
-    trl_aux(:,1:2) = trl_aux(:,1:2) + floor(0.041*aux_raw.fsample); % adjust for stim delay
+    trl_aux(:,1:2) = trl_aux(:,1:2) + floor(params.delay*aux_raw.fsample); % adjust for stim delay
     trl_aux = round(trl_aux);
     
     % Check if uneven amount of trial. If so assume error in beginning.

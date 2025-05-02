@@ -27,7 +27,7 @@ trl_opm(:,1) = find(trig)-(params.pre+params.pad)*opm_raw.fsample;
 trl_opm(:,2) = find(trig)+(params.post+params.pad)*opm_raw.fsample;
 trl_opm(:,3) = -(params.pre+params.pad)*opm_raw.fsample;
 trl_opm(:,4) = opm_raw.trial{1}(opm_trig,trig);
-trl_opm(:,1:2) = trl_opm(:,1:2) + floor(0.041*opm_raw.fsample); % adjust for stim delay
+trl_opm(:,1:2) = trl_opm(:,1:2) + floor(0.01*opm_raw.fsample); % adjust for stim delay
 trl_opm = round(trl_opm);
 
 if ~opm_only
@@ -79,6 +79,7 @@ if ~opm_only
     cfg.demean          = 'yes';
     cfg.baselinewindow  = [-params.pre 0];
     aux_epo = ft_preprocessing(cfg,aux_epo);
+end
 
 %% OPM data filter & epoch
 cfg = [];
@@ -107,32 +108,43 @@ cfg.baselinewindow  = [-params.pre 0];
 opm_epo = ft_preprocessing(cfg, opm_epo);
 
 % Resample
-cfg            = [];
-cfg.time = aux_epo.time;
-cfg.detrend    = 'no';
-opm_epo_ds = ft_resampledata(cfg, opm_epo);
+if ~opm_only
+    cfg            = [];
+    cfg.time = aux_epo.time;
+    cfg.detrend    = 'no';
+    opm_epo_ds = ft_resampledata(cfg, opm_epo);
+else
+    cfg            = [];
+    cfg.resamplefs = 1000;
+    cfg.detrend    = 'no';
+    opm_epo_ds = ft_resampledata(cfg, opm_epo);
+end
 
 %% Combine data
-EOG_channels = find(contains(aux_epo.label,'EOG'));
-ECG_channels = find(contains(aux_epo.label,'ECG'));
-EEG_channels = find(contains(aux_epo.label,'EEG'));
-MISC_channels = find(contains(aux_epo.label,'MISC'));
-TRIG_channels = find(contains(aux_epo.label,'STI101'));
-include_channels = [EOG_channels; ECG_channels; EEG_channels; MISC_channels; TRIG_channels];
-
-data = opm_epo_ds; 
-data.elec = aux_epo.elec;
-data.time = aux_epo.time;
-data.label = [data.label; aux_epo.label(include_channels)];
-data.hdr.label = data.label;
-data.hdr.nChans = data.hdr.nChans + length(include_channels);
-data.hdr.chantype = [data.hdr.chantype; aux_epo.hdr.chantype(include_channels)];
-data.hdr.chanunit = [data.hdr.chanunit; aux_epo.hdr.chanunit(include_channels)];
-data.sampleinfo = aux_epo.sampleinfo;
-data.trialinfo = aux_epo.trialinfo;
-n_smpl = size(aux_epo.trial{1},2);
-for i = 1:length(data.trial)
-    data.trial{i} = [data.trial{i}(:,1:n_smpl); aux_epo.trial{i}(include_channels,:)]; 
+if ~opm_only
+    EOG_channels = find(contains(aux_epo.label,'EOG'));
+    ECG_channels = find(contains(aux_epo.label,'ECG'));
+    EEG_channels = find(contains(aux_epo.label,'EEG'));
+    MISC_channels = find(contains(aux_epo.label,'MISC'));
+    TRIG_channels = find(contains(aux_epo.label,'STI101'));
+    include_channels = [EOG_channels; ECG_channels; EEG_channels; MISC_channels; TRIG_channels];
+    
+    data = opm_epo_ds; 
+    data.elec = aux_epo.elec;
+    data.time = aux_epo.time;
+    data.label = [data.label; aux_epo.label(include_channels)];
+    data.hdr.label = data.label;
+    data.hdr.nChans = data.hdr.nChans + length(include_channels);
+    data.hdr.chantype = [data.hdr.chantype; aux_epo.hdr.chantype(include_channels)];
+    data.hdr.chanunit = [data.hdr.chanunit; aux_epo.hdr.chanunit(include_channels)];
+    data.sampleinfo = aux_epo.sampleinfo;
+    data.trialinfo = aux_epo.trialinfo;
+    n_smpl = size(aux_epo.trial{1},2);
+    for i = 1:length(data.trial)
+        data.trial{i} = [data.trial{i}(:,1:n_smpl); aux_epo.trial{i}(include_channels,:)]; 
+    end
+else
+    data = opm_epo_ds;
 end
 
 %% Find bad opm channels

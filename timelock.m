@@ -39,7 +39,7 @@ for i_trigger = 1:length(params.trigger_codes)
     saveas(h, fullfile(save_path, 'figs', [params.paradigm '_butterflyPlot_trig-' params.trigger_labels{i_trigger} '.jpg']))
     close all
 
-    if isfield(params,'plot_chanel') && sum(contains(timelocked.label,params.plot_channel)) == 1 % only if a single channel is selected
+    if isfield(params,'plot_channel') && sum(contains(timelocked.label,params.plot_channel)) == 1 % only if a single channel is selected
         i_plot_ch = find(contains(timelocked.label,params.plot_channel)); % pick like 'L204' or 'L204_bz' 
         h = figure;
         hold on

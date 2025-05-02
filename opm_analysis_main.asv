@@ -40,12 +40,11 @@ params = [];
 params.pre = 0.2; % Trial prestim in seconds
 params.post = 1.4; % Trial poststim in seconds
 params.pad = 0.2; % Trial (pre and post) padding in seconds
-params.delay = 0.01; % Stimulus delay in seconds (e.g., 0.01 for eartubes or 0.041 for membranes).
 
 params.filter = [];
 params.filter.hp_freq = 1; % Highpass cutoff frequency
 params.filter.lp_freq = 100; % Lowpass cutoff frequency
-params.filter.notch = sort([50:50:150 60:60:120]); % Notch (bandstop) filter frequencies
+params.filter.notch = sort([50:50:150 60:60:120]); % Not filt
 
 params.n_comp = 40; % Number of ICA components 
 params.manual_ica = false; % Manually select ICA components to remove?
@@ -220,6 +219,8 @@ for i_ses = 1:length(ses)
     if overwrite.coreg==true 
         ft_hastoolbox('mne', 1);
         params.include_chs = load(fullfile(save_path, ['include_chs' num2str(length(opm_files))])).include_chs;
+        %data_ica = load(fullfile(save_path, [params.sub '_' params.modality '_auditory' num2str(i_file) '.mat'])).data_ica;
+        %params.include_chs = data_ica.label;   
         clear data_ica
         opm_trans = fit_hpi_opmbci(hpi_path, aux_files{1}, save_path, params);
     
