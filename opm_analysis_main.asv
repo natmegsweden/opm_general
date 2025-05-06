@@ -6,10 +6,10 @@ restoredefaultpath
 %% Base paths
 if contains(pwd,'/home/chrpfe')
     % Server:
-    base_data_path = '/archive/23106_opmbci/';
-    base_save_path = '/home/chrpfe/Documents/23106_opmbci';
+    base_data_path = '/archive/23108_CAPSI/MEG/';
+    base_save_path = '/home/share/Documents/23106_opmbci';
     base_matlab_path = '/home/chrpfe/Documents/MATLAB/';
-    project_scripts_path = '/home/chrpfe/Documents/MATLAB/23106_opmbci/opmbci_preprocessing';
+    project_scripts_path = '/home/chrpfe/Documents/MATLAB/opm_general';
 else
     % Laptop:
     base_data_path = '/Volumes/dataarchvie/21099_opm/MEG';
@@ -19,7 +19,7 @@ else
 end
 
 %% Set up fieldtrip
-addpath(fullfile(base_matlab_path,'fieldtrip/')) % Fieldtrip path
+addpath(fullfile(base_matlab_path,'fieldtrip')) % Fieldtrip path
 addpath(fullfile(base_matlab_path,'fieldtrip_private')) % Fieldtrip private functions
 addpath(project_scripts_path)
 ft_defaults
@@ -81,10 +81,12 @@ ses = {'241104'}; % List of sessions; if multiple per subject define as: {'sub1_
 
 paradigms = {'AudOdd'}; % Paradigms to analyze for all participants and sessions
 
+[subjects, sessions] = getSubjectsAndSessions(base_data_path);
+
 %%
 i_sub = 1;
 for i_ses = 1:length(ses(i_sub,:))
-    if isempty(ses{i_sub,i_ses})
+    if isempty(sessions{i_sub,i_ses})
         disp(['No session defined! Skipping sub-' num2str(i_sub,'%02d') '_ses-' num2str(i_ses,'%02d')])
         continue % Skip iteration if no session defined
     end
@@ -105,7 +107,7 @@ for i_ses = 1:length(ses(i_sub,:))
     for i_paradigm = 1:length(paradigms)
         opm_files{i_paradigm} = fullfile(raw_path,'osmeg',[paradigms{i_paradigm} 'OPM_raw.fif']); % opm files 
         aux_files{i_paradigm} = fullfile(raw_path,'meg',[paradigms{i_paradigm} 'EEG.fif']); % corresponding aux files containing EOG/ECG
-        squid_files{i_paradigm} = fullfile(raw_path,'meg',[paradigms{i_paradigm} '_proc-tsss+corr98+mc+avgHead_meg.fif']); % corresponding aux files containing EOG/ECG
+        squid_files{i_paradigm} = fullfile(raw_path,'meg',[paradigms{i_paradigm} 'MEG_proc-tsss+corr98+mc+avgHead_meg.fif']); % corresponding aux files containing EOG/ECG
     end
     hpi_path = fullfile(raw_path,'osmeg');
     mri_path = '/Volumes/dataarchvie/23106_opmbci/NatMEG_0953/mri/';
@@ -215,6 +217,49 @@ for i_ses = 1:length(ses(i_sub,:))
             timelocked = timelock(data_ica, save_path, params);
             save(fullfile(save_path, [params.paradigm '_timelocked']), 'timelocked', '-v7.3'); 
             clear timelocked
+
+            %% CAPSI
+            params.modality = 'opmLP';
+            cfg = [];
+            cfg.lpfilter        = 'yes';         
+            cfg.lpfreq          = 20;
+            cfg.demean          = 'yes';
+            data_lp = ft_preprocessing(cfg, data_ica);
+            cfg = [];
+            cfg.latency = [-0.1 0.5];
+            data_lp = ft_selectdata(cfg, data_lp);
+            timelock(data_lp, save_path, params); 
+            clear data_lp
+
+            params.modality = 'opmHP';
+            cfg = [];
+            cfg.hpfilter        = 'yes';         
+            cfg.hpfreq          = 30;
+            cfg.hpinstabilityfix = 'reduce';
+            cfg.demean          = 'yes';
+            data_hp = ft_preprocessing(cfg, data_ica);
+            timelocked = timelock(data_hp, save_path, params); 
+            clear data_hp
+
+            for i_trigger = 1:length(params.trigger_codes)
+                cfg = [];
+                cfg.channel = '*bz';
+                cfg.output = 'pow';
+                cfg.method = 'mtmfft';
+                cfg.taper = 'hanning';
+                cfg.foi = 30:1:50;
+                cfg.pad = 2;
+                freq = ft_freqanalysis(cfg, timelocked{i_trigger});   
+                disp(timelocked{1}.trigger_label)
+                h = figure;
+                plot(freq.freq,freq.powspctrm)
+                xlabel('Frequency (Hz)')
+                ylabel('Power (T^2)')
+                title('OPM spectrum')
+                saveas(h, fullfile(save_path, 'figs', [params.paradigm '_freqTag_trig-' params.trigger_labels{i_trigger} '_' params.modality '.jpg']))
+                close all
+                clear freq
+            end
         end
         clear data_ica
 
@@ -260,7 +305,7 @@ for i_ses = 1:length(ses(i_sub,:))
             
             % ICA
             disp('Running ICA ...')
-            if sum(contains(data_ica.label,'EOG'))<1 || sum(contains(data_ica.label,'ECG'))<1 % No ExG data
+            if sum(contains(data_epo.label,'EOG'))<1 || sum(contains(data_epo.label,'ECG'))<1 % No ExG data
                 params.manual_ica = 1;
                 params.save_ica = 1;
             end
@@ -280,6 +325,48 @@ for i_ses = 1:length(ses(i_sub,:))
             timelocked = timelock(data_ica, save_path, params);
             save(fullfile(save_path, [params.paradigm '_timelocked_squidmag']), 'timelocked', '-v7.3'); 
             clear timelocked
+
+            %% CAPSI
+            params.modality = 'squidLP';
+            cfg = [];
+            cfg.lpfilter        = 'yes';         
+            cfg.lpfreq          = 20;
+            cfg.demean          = 'yes';
+            data_lp = ft_preprocessing(cfg, data_ica);
+            cfg = [];
+            cfg.latency = [-0.1 0.5];
+            data_lp = ft_selectdata(cfg, data_lp);
+            timelock(data_lp, save_path, params); 
+            clear data_lp
+
+            params.modality = 'squidHP';
+            cfg = [];
+            cfg.hpfilter        = 'yes';         
+            cfg.hpfreq          = 30;
+            cfg.hpinstabilityfix = 'reduce';
+            cfg.demean          = 'yes';
+            data_hp = ft_preprocessing(cfg, data_ica);
+            timelocked = timelock(data_hp, save_path, params); 
+            clear data_hp
+
+            for i_trigger = 1:length(params.trigger_codes)
+                cfg = [];
+                cfg.channel = 'megmag';
+                cfg.output = 'pow';
+                cfg.method = 'mtmfft';
+                cfg.taper = 'hanning';
+                cfg.foi = 30:1:50;
+                cfg.pad = 2;
+                freq = ft_freqanalysis(cfg, timelocked{i_trigger});          
+                h = figure;
+                plot(freq.freq,freq.powspctrm)
+                xlabel('Frequency (Hz)')
+                ylabel('Power (T^2)')
+                title('SQUID spectrum')
+                saveas(h, fullfile(save_path, 'figs', [params.paradigm '_freqTag_trig-' params.trigger_labels{i_trigger} '_' params.modality '.jpg']))
+                close all
+                clear freq_pre freq_tag
+            end
         end
         clear data_ica
     end
@@ -430,24 +517,25 @@ clear all
 exit
 
 %% Functions
-function files = findOpmFiles(directory, pattern)
-    % This function finds all files in the specified directory that match
-    % the pattern "TrainingSet" followed by a number from 1 to 10 and then "_raw.fif".
+function [subjects, sessions] = getSubjectsAndSessions(folderPath)
+    % Get a list of all subject folders
+    subjectFolders = dir(fullfile(folderPath, 'NatMEG_*'));
     
-    % Define the pattern
-    pattern = '*_raw.fif';
+    % Initialize cell arrays for subjects and sessions
+    subjects = cell(length(subjectFolders),1);
+    sessions = {};
     
-    % Get a list of all files in the directory
-    allFiles = dir(directory);
-    
-    % Initialize an empty cell array to store matching files
-    files = {};
-    
-    % Loop through all files and check if they match the pattern
-    for i = 1:length(allFiles)
-        if ~allFiles(i).isdir
-            if ~isempty(regexp(allFiles(i).name, pattern, 'once'))
-                files{end+1} = fullfile(directory, allFiles(i).name); %#ok<AGROW>
+    % Loop through each subject folder
+    for i_sub = 1:length(subjectFolders)
+        if subjectFolders(i_sub).isdir
+            subjectID = subjectFolders(i_sub).name(end-4:end);
+            subjects{i_sub} = subjectID;
+            
+            sessionFolders = dir(fullfile(folderPath, subjectName));
+            for j = 1:length(sessionFolders)
+                if sessionFolders(j).isdir
+                    sessions{i_sub, i_ses} = sessionFolders(j).name;
+                end
             end
         end
     end

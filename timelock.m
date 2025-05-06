@@ -34,9 +34,9 @@ for i_trigger = 1:length(params.trigger_codes)
     plot(timelocked{i_trigger}.time*1e3,timelocked{i_trigger}.avg(chs,:)*amp_scaler)
     xlabel('t [msec]')
     ylabel(amp_label)
-    xlim([-params.pre params.post]*1e3);
+    %xlim([-params.pre params.post]*1e3);
     title(['Evoked - ' params.trigger_labels{i_trigger} ' (n_{trls}=' num2str(length(timelocked{i_trigger}.cfg.trials)) ')'])
-    saveas(h, fullfile(save_path, 'figs', [params.paradigm '_butterflyPlot_trig-' params.trigger_labels{i_trigger} '.jpg']))
+    saveas(h, fullfile(save_path, 'figs', [params.paradigm '_butterflyPlot_trig-' params.trigger_labels{i_trigger} '_' params.modality '.jpg']))
     close all
 
     if isfield(params,'plot_channel') && sum(contains(timelocked{i_trigger}.label,params.plot_channel)) == 1 % only if a single channel is selected
@@ -51,8 +51,8 @@ for i_trigger = 1:length(params.trigger_codes)
         title(['Channel: ' params.plot_channel])
         ylabel(amp_label)
         xlabel('time [ms]')
-        xlim([-params.pre params.post]*1e3);
-        saveas(h, fullfile(save_path, 'figs', [params.paradigm '_evoked-' params.plot_channel '_trig-' params.trigger_labels{i_trigger} '.jpg']))
+        %xlim([-params.pre params.post]*1e3);
+        saveas(h, fullfile(save_path, 'figs', [params.paradigm '_evoked-' params.plot_channel '_trig-' params.trigger_labels{i_trigger} '_' params.modality '.jpg']))
         close all
     end
 
@@ -65,7 +65,7 @@ for i_trigger = 1:length(params.trigger_codes)
         ft_topoplotER(cfg, timelocked{i_trigger});
         axis on
         colorbar
-        saveas(h, fullfile(save_path, 'figs', [params.paradim '_topography_trig-' params.trigger_labels{i_trigger} '.jpg']))
+        saveas(h, fullfile(save_path, 'figs', [params.paradim '_topography_trig-' params.trigger_labels{i_trigger} '_' params.modality '.jpg']))
         close all
     end
 end

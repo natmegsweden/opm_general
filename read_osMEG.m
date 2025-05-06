@@ -27,13 +27,13 @@ cfg.datafile        = opm_file;
 cfg.coordsys        = 'dewar';
 cfg.coilaccuracy    = 0;
 opm_raw = ft_preprocessing(cfg);
-opm_trig = find(contains(opm_raw.label,'di'));
-trig = opm_raw.trial{1}(opm_trig,:)>0.5;
+i_trig_opm = find(contains(opm_raw.label,'di'));
+trig = opm_raw.trial{1}(i_trig_opm,:)>0.5;
 trig = [false trig(2:end)&~trig(1:end-1)];
 trl_opm(:,1) = find(trig)-(params.pre+params.pad)*opm_raw.fsample;
 trl_opm(:,2) = find(trig)+(params.post+params.pad)*opm_raw.fsample;
 trl_opm(:,3) = -(params.pre+params.pad)*opm_raw.fsample;
-trl_opm(:,4) = opm_raw.trial{1}(opm_trig,trig);
+trl_opm(:,4) = opm_raw.trial{1}(i_trig_opm,trig);
 trl_opm(:,1:2) = trl_opm(:,1:2) + floor(params.delay*opm_raw.fsample); % adjust for stim delay
 trl_opm = round(trl_opm);
 
@@ -43,13 +43,13 @@ if ~opm_only
     cfg = [];
     cfg.datafile        = aux_file;
     aux_raw = ft_preprocessing(cfg);
-    aux_trig = find(contains(aux_raw.label,'STI101'));
-    trig = aux_raw.trial{1}(aux_trig,:)>0.5;
+    i_trig_aux = find(contains(aux_raw.label,'STI101'));
+    trig = aux_raw.trial{1}(i_trig_aux,:)>0.5;
     trig = [false trig(2:end)&~trig(1:end-1)];
     trl_aux(:,1) = find(trig)-(params.pre+params.pad)*aux_raw.fsample;
     trl_aux(:,2) = find(trig)+(params.post+params.pad)*aux_raw.fsample;
     trl_aux(:,3) = -(params.pre+params.pad)*aux_raw.fsample;
-    trl_aux(:,4) = aux_raw.trial{1}(aux_trig,trig);
+    trl_aux(:,4) = aux_raw.trial{1}(i_trig_aux,trig);
     trl_aux(:,1:2) = trl_aux(:,1:2) + floor(params.delay*aux_raw.fsample); % adjust for stim delay
     trl_aux = round(trl_aux);
     

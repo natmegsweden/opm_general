@@ -14,15 +14,15 @@ end
 trl = [];
 cfg             = [];
 cfg.datafile    = squid_file;
-squid_raw         = ft_preprocessing(cfg);
-squid_trig = find(contains(squid_raw.label,'STI101'));
-trig = squid_raw.trial{1}(squid_trig,:)>0.5;
+data_raw         = ft_preprocessing(cfg);
+i_trig = find(contains(data_raw.label,'STI101'));
+trig = data_raw.trial{1}(i_trig,:)>0.5;
 trig = [false trig(2:end)&~trig(1:end-1)];
-trl(:,1) = find(trig)-(params.pre+params.pad)*squid_raw.fsample;
-trl(:,2) = find(trig)+(params.post+params.pad)*squid_raw.fsample;
-trl(:,3) = -(params.pre+params.pad)*squid_raw.fsample;
-trl(:,4) = squid_raw.trial{1}(squid_trig,trig);
-trl(:,1:2) = trl(:,1:2) + floor(0.041*squid_raw.fsample); % adjust for stim delay
+trl(:,1) = find(trig)-(params.pre+params.pad)*data_raw.fsample;
+trl(:,2) = find(trig)+(params.post+params.pad)*data_raw.fsample;
+trl(:,3) = -(params.pre+params.pad)*data_raw.fsample;
+trl(:,4) = data_raw.trial{1}(i_trig,trig);
+trl(:,1:2) = trl(:,1:2) + floor(params.delay*data_raw.fsample); % adjust for stim delay
 trl = round(trl);
 
 %% Data filter & epoch
