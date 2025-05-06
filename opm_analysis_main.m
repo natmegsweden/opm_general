@@ -5,12 +5,14 @@ restoredefaultpath
 
 %% Base paths
 if contains(pwd,'/home/chrpfe')
+    server = true;
     % Server:
     base_data_path = '/archive/23108_CAPSI/MEG/';
-    base_save_path = '/home/share/Documents/23106_opmbci';
+    base_save_path = '/home/share/capsi_share';
     base_matlab_path = '/home/chrpfe/Documents/MATLAB/';
     project_scripts_path = '/home/chrpfe/Documents/MATLAB/opm_general';
 else
+    server = false;
     % Laptop:
     base_data_path = '/Volumes/dataarchvie/21099_opm/MEG';
     base_save_path = '/Users/christophpfeiffer/data_local/24110_opm_auditory';
@@ -95,7 +97,7 @@ for i_sub = 1:length(subjects)
         params.ses = ['ses-' num2str(i_ses,'%02d')];
         
         %% Paths
-        raw_path = fullfile(base_data_path, subjects{i_sub}, sessions{i_sub,i_ses});
+        raw_path = fullfile(base_data_path, ['NatMEG_' subjects{i_sub}], sessions{i_sub,i_ses});
         save_path = fullfile(base_save_path, params.sub, params.ses);
         if ~exist(save_path, 'dir')
            mkdir(save_path)
@@ -104,9 +106,14 @@ for i_sub = 1:length(subjects)
            mkdir(fullfile(save_path,'figs'))
         end
         for i_paradigm = 1:length(paradigms)
-            opm_files{i_paradigm} = fullfile(raw_path,'osmeg',[paradigms{i_paradigm} 'OPM_raw.fif']); % opm files 
+            if server % on server
+                opm_files{i_paradigm} = dir(fullfile(raw_path,'osmeg',['*' paradigms{i_paradigm} 'OPM_raw.fif'])).name; % opm files 
+                squid_files{i_paradigm} = fullfile(raw_path,'meg',[paradigms{i_paradigm} 'MEG.fif']); % corresponding aux files containing EOG/ECG
+            else % on laptop
+                opm_files{i_paradigm} = fullfile(raw_path,'osmeg',[paradigms{i_paradigm} 'OPM_raw.fif']); % opm files 
+                squid_files{i_paradigm} = fullfile(raw_path,'meg',[paradigms{i_paradigm} 'MEG_proc-tsss+corr98+mc+avgHead_meg.fif']); % corresponding aux files containing EOG/ECG
+            end
             aux_files{i_paradigm} = fullfile(raw_path,'meg',[paradigms{i_paradigm} 'EEG.fif']); % corresponding aux files containing EOG/ECG
-            squid_files{i_paradigm} = fullfile(raw_path,'meg',[paradigms{i_paradigm} 'MEG_proc-tsss+corr98+mc+avgHead_meg.fif']); % corresponding aux files containing EOG/ECG
         end
         hpi_path = fullfile(raw_path,'osmeg');
         mri_path = '/Volumes/dataarchvie/23106_opmbci/NatMEG_0953/mri/';
@@ -522,15 +529,15 @@ function [subjects, sessions] = getSubjectsAndSessions(folderPath)
     subjectFolders = dir(fullfile(folderPath, 'NatMEG_*'));
     
     % Initialize cell arrays for subjects and sessions
-    subjects = cell(length(subjectFolders),1);
+    subjects = {};
     sessions = {};
     
     i_sub = 0;
     for i = 1:length(subjectFolders)
-        if subjectFolders(i).isdir && num2str(subjectFolders(i).name(end-3:end)) > 1182
+        if subjectFolders(i).isdir && str2num(subjectFolders(i).name(end-3:end)) > 1182
             i_sub = i_sub + 1;
             subjectID = subjectFolders(i).name(end-3:end);
-            subjects{i_sub} = subjectID;
+            subjects{i_sub,1} = subjectID;
             
             sessionFolders = dir(fullfile(folderPath, subjectFolders(i).name));
             i_ses = 0;
