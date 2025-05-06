@@ -154,6 +154,11 @@ else
     data = opm_epo_ds;
 end
 
+%% Remove padding
+cfg = [];
+cfg.latency = [-params.pre params.post];
+data = ft_selectdata(cfg, data); 
+
 %% Convert to sensor definitions to cm
 data.grad = ft_convert_units(data.grad,'cm');
 

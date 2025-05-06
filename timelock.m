@@ -1,10 +1,10 @@
 function [timelocked] = timelock(data, save_path, params)
 %UNTITLED2 Summary of this function goes here
 %   Detailed explanation goes here
-amp_label     = ft_getopt(params, 'amp_label', ' ');
+amp_label     = ft_getopt(params, 'amp_label', 'na');
 amp_scaler     = ft_getopt(params, 'amp_scaler', 1);
 
-timelocked = cell(length(params.trigger_code),1);
+timelocked = cell(length(params.trigger_codes),1);
 
 % Cut off padding
 cfg = [];
@@ -29,9 +29,9 @@ for i_trigger = 1:length(params.trigger_codes)
     timelocked{i_trigger}.trigger_label = params.trigger_labels(i_trigger);
 
     % Butterfly plot
-    chs = find(contains(timelocked{i_phalange}.label,ft_channelselection(params.chs,timelocked{i_phalange}.label)));
+    chs = find(contains(timelocked{i_trigger}.label,ft_channelselection(params.chs,timelocked{i_trigger}.label)));
     h = figure;
-    plot(timelocked{i_phalange}.time*1e3,timelocked{i_phalange}.avg(chs,:)*amp_scaler)
+    plot(timelocked{i_trigger}.time*1e3,timelocked{i_trigger}.avg(chs,:)*amp_scaler)
     xlabel('t [msec]')
     ylabel(amp_label)
     xlim([-params.pre params.post]*1e3);
@@ -39,8 +39,8 @@ for i_trigger = 1:length(params.trigger_codes)
     saveas(h, fullfile(save_path, 'figs', [params.paradigm '_butterflyPlot_trig-' params.trigger_labels{i_trigger} '.jpg']))
     close all
 
-    if isfield(params,'plot_channel') && sum(contains(timelocked.label,params.plot_channel)) == 1 % only if a single channel is selected
-        i_plot_ch = find(contains(timelocked.label,params.plot_channel)); % pick like 'L204' or 'L204_bz' 
+    if isfield(params,'plot_channel') && sum(contains(timelocked{i_trigger}.label,params.plot_channel)) == 1 % only if a single channel is selected
+        i_plot_ch = find(contains(timelocked{i_trigger}.label,params.plot_channel)); % pick like 'L204' or 'L204_bz' 
         h = figure;
         hold on
         for i_trl = find(data.trialinfo==params.trigger_codes(i_trigger))'
@@ -58,7 +58,7 @@ for i_trigger = 1:length(params.trigger_codes)
 
     if isfield(params,'plot_latency') % latency to plot topogrpaphy at in seconds
         cfg = [];
-        cfg.xlim = [params.plot_latency-0.005 params.plot_latency+0.005];
+        cfg.xlim = [params.plot_latency-0.010 params.plot_latency+0.010];
         cfg.layout = params.layout; 
         cfg.parameter = 'avg';
         h = figure;
