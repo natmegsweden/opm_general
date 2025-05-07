@@ -62,7 +62,8 @@ params.save_ica = 1; % Save plots and components
 
 params.corr_threshold = 0.7; % Correlation threshold for badchannel neighbors
 params.z_threshold = 20; % Zmax threshold for badchannel and trial detection
-params.opm_std_threshold = 2.5e-12; % Stddev threshold for badtrial detection
+params.opm_std_threshold = 5e-12; % Stddev threshold for badtrial detection
+params.squid_std_threshold = 2.5e-12; % Stddev threshold for badtrial detection
 
 params.hpi_freq = 33; % HPI coil frequency
 params.hpi_gof = 0.9; % Minimum goodness-of-fit for including coil in hpi analysis
@@ -86,7 +87,8 @@ paradigms = {'AudOdd'}; % Paradigms to analyze for all participants and sessions
 if server
     subs_to_run = find(cellfun(@(x) strcmp(x,'1183'), subjects)) + (0:2);
 else
-    subs_to_run = find(cellfun(@str2num, subjects)>1082)';
+    %subs_to_run = find(cellfun(@str2num, subjects)>1082)';
+    subs_to_run = find(cellfun(@(x) strcmp(x,'0953'), subjects));
 end
 
 %% Loop over subjects
@@ -241,7 +243,7 @@ for i_sub = subs_to_run
                 cfg = [];
                 cfg.latency = [-0.1 0.5];
                 data_lp = ft_selectdata(cfg, data_lp);
-                timelock(data_lp, save_path, params); 
+                timelocked_opm_lp = timelock(data_lp, save_path, params); 
                 clear data_lp
     
                 params.modality = 'opmHP';
@@ -251,7 +253,7 @@ for i_sub = subs_to_run
                 cfg.hpinstabilityfix = 'reduce';
                 cfg.demean          = 'yes';
                 data_hp = ft_preprocessing(cfg, data_ica);
-                timelocked = timelock(data_hp, save_path, params); 
+                timelocked_opm_hp = timelock(data_hp, save_path, params); 
                 clear data_hp
     
                 for i_trigger = 1:length(params.trigger_codes)
@@ -262,13 +264,15 @@ for i_sub = subs_to_run
                     cfg.taper = 'hanning';
                     cfg.foi = 30:1:50;
                     cfg.pad = 2;
-                    freq = ft_freqanalysis(cfg, timelocked{i_trigger});   
-                    disp(timelocked{1}.trigger_label)
+                    freq = ft_freqanalysis(cfg, timelocked_opm_hp{i_trigger});   
                     h = figure;
                     plot(freq.freq,freq.powspctrm)
                     xlabel('Frequency (Hz)')
                     ylabel('Power (T^2)')
-                    title('OPM spectrum')
+                    [peak_pow, peak_ch] = max(max(freq.powspctrm, [], 2));
+                    noise_pow = mean(freq.powscptr(peak_ch,[find(freq.freq==32) find(freq.freq==48)]));
+                    snr = peak_pow/noise_pow;
+                    title(['OPM spectrum (peak SNR: ' num2str(snr) ')'])
                     saveas(h, fullfile(save_path, 'figs', [params.paradigm '_freqTag_trig-' params.trigger_labels{i_trigger} '_' params.modality '.jpg']))
                     close all
                     clear freq
@@ -303,7 +307,7 @@ for i_sub = subs_to_run
                 cfg = [];
                 cfg.channel = {'megmag'};
                 cfg.metric = 'std';
-                cfg.threshold = params.opm_std_threshold;
+                cfg.threshold = params.squid_std_threshold;
                 [cfg,badtrl_std] = ft_badsegment(cfg, data_epo);
                 data_epo = ft_rejectartifact(cfg,data_epo);
     
@@ -349,7 +353,7 @@ for i_sub = subs_to_run
                 cfg = [];
                 cfg.latency = [-0.1 0.5];
                 data_lp = ft_selectdata(cfg, data_lp);
-                timelock(data_lp, save_path, params); 
+                timelocked_squid_lp = timelock(data_lp, save_path, params); 
                 clear data_lp
     
                 params.modality = 'squidHP';
@@ -359,7 +363,7 @@ for i_sub = subs_to_run
                 cfg.hpinstabilityfix = 'reduce';
                 cfg.demean          = 'yes';
                 data_hp = ft_preprocessing(cfg, data_ica);
-                timelocked = timelock(data_hp, save_path, params); 
+                timelocked_squid_hp = timelock(data_hp, save_path, params); 
                 clear data_hp
     
                 for i_trigger = 1:length(params.trigger_codes)
@@ -370,18 +374,79 @@ for i_sub = subs_to_run
                     cfg.taper = 'hanning';
                     cfg.foi = 30:1:50;
                     cfg.pad = 2;
-                    freq = ft_freqanalysis(cfg, timelocked{i_trigger});          
+                    freq = ft_freqanalysis(cfg, timelocked_squid_hp{i_trigger});          
                     h = figure;
                     plot(freq.freq,freq.powspctrm)
                     xlabel('Frequency (Hz)')
                     ylabel('Power (T^2)')
-                    title('SQUID spectrum')
+                    [peak_pow, peak_ch] = max(max(freq.powspctrm, [], 2));
+                    noise_pow = mean(freq.powscptr(peak_ch,[find(freq.freq==32) find(freq.freq==48)]));
+                    snr = peak_pow/noise_pow;
+                    title(['SQUID spectrum (peak SNR: ' num2str(snr) ')'])
                     saveas(h, fullfile(save_path, 'figs', [params.paradigm '_freqTag_trig-' params.trigger_labels{i_trigger} '_' params.modality '.jpg']))
                     close all
                     clear freq_pre freq_tag
                 end
             end
             clear data_ica
+            
+            %% CAPSI
+            for i_trigger = 1:length(params.trigger_codes)
+                h = figure;
+                subplot(2,1,1)
+                plot(timelocked_opm_lp{i_trigger}.time*1e3,timelocked_opm_lp{i_trigger}.avg*1e15)
+                ylabel('fT')
+                xlabel('ms')
+                title(['OPM: ' params.trigger_labels{i_trigger}])
+                ylimits = ylim;
+                subplot(2,1,2)
+                plot(timelocked_squid_lp{i_trigger}.time*1e3,timelocked_squid_lp{i_trigger}.avg*1e15)
+                ylabel('fT')
+                xlabel('ms')
+                ylim(ylimits)
+                title(['SQUID: ' params.trigger_labels{i_trigger}])
+                saveas(h, fullfile(save_path, 'figs', [params.paradigm '_ButterflyComp_trig-' params.trigger_labels{i_trigger} '.jpg']))
+                close all
+
+                cfg = [];
+                cfg.channel = '*bz';
+                cfg.output = 'pow';
+                cfg.method = 'mtmfft';
+                cfg.taper = 'hanning';
+                cfg.foi = 30:1:50;
+                cfg.pad = 2;
+                freq1 = ft_freqanalysis(cfg, timelocked_opm_hp{i_trigger});
+                [peak_pow, peak_ch] = max(max(freq1.powspctrm, [], 2));
+                noise_pow = mean(freq1.powscptr(peak_ch,[find(freq1.freq==32) find(freq1.freq==48)]));
+                snr_opm = peak_pow/noise_pow;
+                cfg = [];
+                cfg.channel = 'megmag';
+                cfg.output = 'pow';
+                cfg.method = 'mtmfft';
+                cfg.taper = 'hanning';
+                cfg.foi = 30:1:50;
+                cfg.pad = 2;
+                freq2 = ft_freqanalysis(cfg, timelocked_squid_hp{i_trigger});  
+                [peak_pow, peak_ch] = max(max(freq2.powspctrm, [], 2));
+                noise_pow = mean(freq2.powscptr(peak_ch,[find(freq2.freq==32) find(freq2.freq==48)]));
+                snr_squid = peak_pow/noise_pow;
+                h = figure;
+                subplot(2,1,1)
+                plot(freq1.freq,freq1.powspctrm)
+                ylabel('T^2')
+                xlabel('Hz')
+                title(['OPM: ' params.trigger_labels{i_trigger} ' (' numstr(snr_opm) ')'])
+                ylimits = ylim;
+                subplot(2,1,2)
+                plot(freq2.freq,freq2.powspctrm)
+                ylabel('T^2')
+                xlabel('Hz')
+                ylim(ylimits)
+                title(['SQUID: ' params.trigger_labels{i_trigger} ' (' numstr(snr_squid) ')'])
+                saveas(h, fullfile(save_path, 'figs', [params.paradigm '_FreqTagComp_trig-' params.trigger_labels{i_trigger} '.jpg']))
+                close all
+            end
+
         end
         
         %% MRI
