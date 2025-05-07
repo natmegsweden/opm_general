@@ -46,6 +46,7 @@ if save_results
             h = figure;
             ft_topoplotIC(cfg, comp);   
             saveas(h,fullfile(save_path, 'figs', [params.paradigm '_ica_comps' num2str(i) '.jpg'])) 
+            close all
         end
     
         if mod(n_comp,16)~=0
@@ -56,6 +57,7 @@ if save_results
             h = figure;
             ft_topoplotIC(cfg, comp);   
             saveas(h,fullfile(save_path, 'figs', [params.paradigm '_ica_comps' num2str(i+1) '.jpg'])) 
+            close all
         end
     else
         cfg           = [];
@@ -65,8 +67,8 @@ if save_results
         h = figure;
         ft_topoplotIC(cfg, comp);   
         saveas(h,fullfile(save_path, 'figs', [params.paradigm '_ica_comps.jpg'])) 
+        close all
     end
-    close all
 end
 
 if manual_ica
@@ -161,8 +163,8 @@ else
                 title(['Comp: ' num2str(ecg_comp_idx(i)) '; R_{ecg} = ' num2str(R(ecg_comp_idx(i),1))])
             end
             saveas(h, fullfile(save_path, 'figs', [params.paradigm '_ica_ecg_cor.jpg'])) 
+            close all
         end
-        close all
         
         % Plot coherence spectrum between all components and the ECG
         h = figure;
@@ -276,8 +278,8 @@ else
                 title(['Comp: ' num2str(eog1_comp_idx(i)) '; R_{eog1} = ' num2str(R(eog1_comp_idx(i),1))])
             end
             saveas(h, fullfile(save_path, 'figs', [params.paradigm '_ica_eog1_cor.jpg'])) 
+            close all
         end
-        close all
     
         if length(eog2_comp_idx)>=1
             h = figure;
@@ -290,8 +292,8 @@ else
                 title(['Comp: ' num2str(eog2_comp_idx(i)) '; R_{eog2} = ' num2str(R(eog2_comp_idx(i),2))])
             end
             saveas(h,fullfile(save_path, 'figs', [params.paradigm '_ica_eog2_cor.jpg'])) 
+            close all
         end
-        close all
     
         % Plot coherence spectrum between all components and the EOG
         h = figure;
@@ -347,7 +349,7 @@ if save_results && ~manual_ica
         h = figure;
         ft_topoplotIC(cfg, comp);   
         saveas(h,fullfile(save_path, 'figs', [params.paradigm '_ica_rejected_comps' num2str(i) '.jpg'])) 
+        close all
     end
-    close all
 end
 end
