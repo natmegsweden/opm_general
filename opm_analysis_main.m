@@ -83,10 +83,16 @@ params.chs = '*bz';
 
 paradigms = {'AudOdd'}; % Paradigms to analyze for all participants and sessions
 
+if server
+    subs_to_run = find(cellfun(@(x) strcmp(x,'1183'), subjects)) + (0:2);
+else
+    subs_to_run = find(cellfun(@str2num, subjects)>1082)';
+end
+
 %% Loop over subjects
-for i_sub = 1:length(subjects)
+for i_sub = subs_to_run
     % Loop over sessions
-    for i_ses = 1:length(ses(i_sub,:))
+    for i_ses = 1:length(sessions(i_sub,:))
         if isempty(sessions{i_sub,i_ses})
             disp(['No session defined! Skipping sub-' num2str(i_sub,'%02d') '_ses-' num2str(i_ses,'%02d')])
             continue % Skip iteration if no session defined
@@ -108,7 +114,7 @@ for i_sub = 1:length(subjects)
         for i_paradigm = 1:length(paradigms)
             if server % on server
                 opm_files{i_paradigm} = dir(fullfile(raw_path,'osmeg',['*' paradigms{i_paradigm} 'OPM_raw.fif'])).name; % opm files 
-                squid_files{i_paradigm} = fullfile(raw_path,'meg',[paradigms{i_paradigm} 'MEG.fif']); % corresponding aux files containing EOG/ECG
+                squid_files{i_paradigm} = fullfile(raw_path,'meg',[paradigms{i_paradigm} 'MEG_tsss_mc.fif']); % corresponding aux files containing EOG/ECG
             else % on laptop
                 opm_files{i_paradigm} = fullfile(raw_path,'osmeg',[paradigms{i_paradigm} 'OPM_raw.fif']); % opm files 
                 squid_files{i_paradigm} = fullfile(raw_path,'meg',[paradigms{i_paradigm} 'MEG_proc-tsss+corr98+mc+avgHead_meg.fif']); % corresponding aux files containing EOG/ECG
@@ -534,7 +540,7 @@ function [subjects, sessions] = getSubjectsAndSessions(folderPath)
     
     i_sub = 0;
     for i = 1:length(subjectFolders)
-        if subjectFolders(i).isdir && str2num(subjectFolders(i).name(end-3:end)) > 1182
+        if subjectFolders(i).isdir
             i_sub = i_sub + 1;
             subjectID = subjectFolders(i).name(end-3:end);
             subjects{i_sub,1} = subjectID;
