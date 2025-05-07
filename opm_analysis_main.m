@@ -113,7 +113,8 @@ for i_sub = subs_to_run
         end
         for i_paradigm = 1:length(paradigms)
             if server % on server
-                opm_files{i_paradigm} = dir(fullfile(raw_path,'osmeg',['*' paradigms{i_paradigm} 'OPM_raw.fif'])).name; % opm files 
+                tmp = dir(fullfile(raw_path,'opm',['*' paradigms{i_paradigm} 'OPM_raw.fif']));
+                opm_files{i_paradigm} = fullfile(tmp.folder,tmp.name); % opm files 
                 squid_files{i_paradigm} = fullfile(raw_path,'meg',[paradigms{i_paradigm} 'MEG_tsss_mc.fif']); % corresponding aux files containing EOG/ECG
             else % on laptop
                 opm_files{i_paradigm} = fullfile(raw_path,'osmeg',[paradigms{i_paradigm} 'OPM_raw.fif']); % opm files 
