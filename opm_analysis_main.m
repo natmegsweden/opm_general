@@ -270,7 +270,7 @@ for i_sub = subs_to_run
                     xlabel('Frequency (Hz)')
                     ylabel('Power (T^2)')
                     [peak_pow, peak_ch] = max(max(freq.powspctrm, [], 2));
-                    noise_pow = mean(freq.powscptr(peak_ch,[find(freq.freq==32) find(freq.freq==48)]));
+                    noise_pow = mean(freq.powspctrm(peak_ch,[find(freq.freq==32) find(freq.freq==48)]));
                     snr = peak_pow/noise_pow;
                     title(['OPM spectrum (peak SNR: ' num2str(snr) ')'])
                     saveas(h, fullfile(save_path, 'figs', [params.paradigm '_freqTag_trig-' params.trigger_labels{i_trigger} '_' params.modality '.jpg']))
@@ -380,7 +380,7 @@ for i_sub = subs_to_run
                     xlabel('Frequency (Hz)')
                     ylabel('Power (T^2)')
                     [peak_pow, peak_ch] = max(max(freq.powspctrm, [], 2));
-                    noise_pow = mean(freq.powscptr(peak_ch,[find(freq.freq==32) find(freq.freq==48)]));
+                    noise_pow = mean(freq.powspctrm(peak_ch,[find(freq.freq==32) find(freq.freq==48)]));
                     snr = peak_pow/noise_pow;
                     title(['SQUID spectrum (peak SNR: ' num2str(snr) ')'])
                     saveas(h, fullfile(save_path, 'figs', [params.paradigm '_freqTag_trig-' params.trigger_labels{i_trigger} '_' params.modality '.jpg']))
@@ -417,7 +417,7 @@ for i_sub = subs_to_run
                 cfg.pad = 2;
                 freq1 = ft_freqanalysis(cfg, timelocked_opm_hp{i_trigger});
                 [peak_pow, peak_ch] = max(max(freq1.powspctrm, [], 2));
-                noise_pow = mean(freq1.powscptr(peak_ch,[find(freq1.freq==32) find(freq1.freq==48)]));
+                noise_pow = mean(freq1.powspctrm(peak_ch,[find(freq1.freq==32) find(freq1.freq==48)]));
                 snr_opm = peak_pow/noise_pow;
                 cfg = [];
                 cfg.channel = 'megmag';
@@ -428,7 +428,7 @@ for i_sub = subs_to_run
                 cfg.pad = 2;
                 freq2 = ft_freqanalysis(cfg, timelocked_squid_hp{i_trigger});  
                 [peak_pow, peak_ch] = max(max(freq2.powspctrm, [], 2));
-                noise_pow = mean(freq2.powscptr(peak_ch,[find(freq2.freq==32) find(freq2.freq==48)]));
+                noise_pow = mean(freq2.powspctrm(peak_ch,[find(freq2.freq==32) find(freq2.freq==48)]));
                 snr_squid = peak_pow/noise_pow;
                 h = figure;
                 subplot(2,1,1)
