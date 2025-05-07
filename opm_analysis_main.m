@@ -435,17 +435,19 @@ for i_sub = subs_to_run
                 plot(freq1.freq,freq1.powspctrm)
                 ylabel('T^2')
                 xlabel('Hz')
-                title(['OPM: ' params.trigger_labels{i_trigger} ' (' numstr(snr_opm) ')'])
+                title(['OPM: ' params.trigger_labels{i_trigger} ' (' num2str(snr_opm) ')'])
                 ylimits = ylim;
                 subplot(2,1,2)
                 plot(freq2.freq,freq2.powspctrm)
                 ylabel('T^2')
                 xlabel('Hz')
                 ylim(ylimits)
-                title(['SQUID: ' params.trigger_labels{i_trigger} ' (' numstr(snr_squid) ')'])
+                title(['SQUID: ' params.trigger_labels{i_trigger} ' (' num2str(snr_squid) ')'])
                 saveas(h, fullfile(save_path, 'figs', [params.paradigm '_FreqTagComp_trig-' params.trigger_labels{i_trigger} '.jpg']))
                 close all
+                clear freq1 freq2
             end
+            clear timelocked_opm_lp timelocked_opm_hp timelocked_squid_lp timelocked_squid_hp
 
         end
         
