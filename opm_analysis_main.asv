@@ -90,7 +90,6 @@ else
     %subs_to_run = find(cellfun(@str2num, subjects)>1082)';
     subs_to_run = find(cellfun(@(x) strcmp(x,'0953'), subjects));
 end
-ses_cnt = 0;
 
 %% Loop over subjects
 for i_sub = subs_to_run
@@ -101,8 +100,6 @@ for i_sub = subs_to_run
             continue % Skip iteration if no session defined
         end
     
-        ses_cnt = ses_cnt + 1;
-
         %% Loop over subjects
         params.sub = ['sub-' num2str(i_sub,'%02d')];
         params.ses = ['ses-' num2str(i_ses,'%02d')];
@@ -454,14 +451,15 @@ for i_sub = subs_to_run
                 close all
                 clear freq1 freq2
 
-                grp_pp_squid(ses_cnt,i_trigger) = pp_squid;
-                grp_pp_opm(ses_cnt,i_trigger) = pp_opm;
-                grp_SNR_squid(ses_cnt,i_trigger) = snr_squid;
-                grp_SNR_opm(ses_cnt,i_trigger) = snr_opm;
-                grp_tag_squid(ses_cnt,i_trigger) = peak_pow_squid;
-                grp_tag_opm(ses_cnt,i_trigger) = peak_pow_opm;
+                grp_pp_squid(sub_cnt,i_trigger) = pp_squid;
+                grp_pp_opm(sub_cnt,i_trigger) = pp_opm;
+                grp_SNR_squid(sub_cnt,i_trigger) = snr_squid;
+                grp_SNR_opm(sub_cnt,i_trigger) = snr_opm;
+                grp_tag_squid(sub_cnt,i_trigger) = peak_pow_squid;
+                grp_tag_opm(sub_cnt,i_trigger) = peak_pow_opm;
             end
             clear timelocked_opm_lp timelocked_opm_hp timelocked_squid_lp timelocked_squid_hp
+
         end
         
         %% MRI
@@ -604,8 +602,6 @@ for i_sub = subs_to_run
         close all
     end
 end
-
-save(fullfile(base_save_path, 'group_results.mat'), 'grp_tag_opm','grp_tag_squid','grp_SNR_opm','grp_SNR_squid','grp_pp_opm','grp_pp_squid');
 
 %% clear and close all, then exit to free memory
 close all
