@@ -73,6 +73,8 @@ params.trigger_labels = {'std', 'ngl', 'gol', 'ngh', 'goh'}; % Labels correspond
 
 params.src_density = '8'; % Sourcemodel density ('4', '8' or '32') = approximate number of sources per hemisphere
 
+params.cov = 'resting_state';
+
 params.modality = 'opm';
 params.layout = 'fieldlinebeta2bz_helmet.mat';
 params.chs = '*bz';
@@ -153,6 +155,7 @@ for i_sub = subs_to_run
         
                 % HFC
                 if params.apply_hfc
+                    % Save ECG, EOG and EEG channels
                     cfg = [];
                     cfg.channel = {'EOG*', 'ECG*', 'EEG*'};
                     data_ExG = ft_selectdata(cfg,data_epo);
@@ -164,13 +167,17 @@ for i_sub = subs_to_run
                     cfg.residualcheck   = 'no';
                     data_epo = ft_denoise_hfc(cfg,data_epo);
     
-                    cfg = [];
-                    data_epo = ft_appenddata(cfg,data_epo,data_ExG);
+                    % Replace ECG, EOG and EEG channels
+                    data_epo.label = vertcat(data_epo.label,data_ExG.label);
+                    for i = 1:length(data_epo.trial)
+                        data_epo.trial{i} = vertcat(data_epo.trial{i}, data_ExG.trial{i}); 
+                    end
                     clear data_ExG
                 end
     
                 % AMM
                 if params.apply_amm
+                    % Save ECG, EOG and EEG channels
                     cfg = [];
                     cfg.channel = {'EOG*', 'ECG*', 'EEG*'};
                     data_ExG = ft_selectdata(cfg,data_epo);
@@ -180,8 +187,11 @@ for i_sub = subs_to_run
                     cfg.updatesens      = 'yes';
                     data_epo = ft_denoise_amm(cfg,data_epo);
     
-                    cfg = [];
-                    data_epo = ft_appenddata(cfg,data_epo,data_ExG);
+                    % Replace ECG, EOG and EEG channels
+                    data_epo.label = vertcat(data_epo.label,data_ExG.label);
+                    for i = 1:length(data_epo.trial)
+                        data_epo.trial{i} = vertcat(data_epo.trial{i}, data_ExG.trial{i}); 
+                    end
                     clear data_ExG
                 end
     
@@ -556,52 +566,22 @@ for i_sub = subs_to_run
             clear headmodels sourcemodel
             sourcemodel = load(fullfile(save_path, 'sourcemodel')).sourcemodel;
             headmodels = load(fullfile(save_path,'headmodels.mat')).headmodels;
-            pos = sourcemodel.pos;
-            tri = sourcemodel.tri;
-            roi = sourcemodel.brainstructurelabel;
             
             N_rois = length(sourcemodel.brainstructurelabel);
-            N_sources = size(pos, 1);
+            N_sources = size(sourcemodel.pos, 1);
             mapping_matrix = zeros(N_rois, N_sources);
             for i = 1:N_rois
                 mapping_matrix(i,sourcemodel.brainstructure==i) = 1;
             end
             roi_counts = sum(mapping_matrix, 2);
             mapping_matrix = mapping_matrix ./ repmat(roi_counts,[1 size(mapping_matrix,2)]);
-        
-            for i_file = 1:length(opm_files)
-                if i_ses == 1
-                    data_set = '';
-                else
-                    data_set = num2str(i_file);
-                end
-            
-                timelocked = load(fullfile(save_path, [params.sub '_' params.modality '_motorimag_timelockedT' data_set '.mat'])).timelocked;
-                mne = fit_mne_opmbci(timelocked,headmodels,sourcemodel,params); 
-                mne_inv = zeros(length(mne.avg.filter),length(mne.avg.label));
-                for i = 1:length(mne.avg.filter)
-                    mne_inv(i,:) = mne.avg.filter{i};
-                end
-                % Plot timelocked
-                h = figure ;
-                plot(timelocked.time,timelocked.avg)
-                title('Motor imagery timelocked')
-                saveas(h, fullfile(save_path, 'figs', 'opm_motorimag_timelocked.jpg'))
-                close all
-                clear mne timelocked
-                data_ica = load(fullfile(save_path, [params.sub '_' params.modality '_motorimag' data_set '.mat'])).data_ica;
-                trial = cell(length(data_ica.trial),1);
-                for i_trl = 1:length(data_ica.trial)
-                    trial{i_trl} = mapping_matrix*((mne_inv*data_ica.trial{i_trl}));
-                end
-                time = data_ica.time{1};
-                label = params.trigger_labels(data_ica.trialinfo-64);
-                save(fullfile(save_path, ['motorimag_mne' num2str(i_file) '.mat']),'mne_inv','trial','time','label','pos','tri','roi','-v7.3');
-                clear mne_inv trial time label  data_ica
-            end
-            clear pos tri roi sourcemodel headmodels mapping_matrix
+    
+            opm_timelocked = load(fullfile(save_path, [params.sub '_opm_auditory_timelockedT.mat'])).timelocked;
+            squidmag_timelocked = load(fullfile(save_path, [params.sub '_squidmag_auditory_timelocked.mat'])).timelocked;
+            squidgrad_timelocked = load(fullfile(save_path, [params.sub '_squidgrad_auditory_timelocked.mat'])).timelocked;
+            mne = fit_mne(save_path,squidmag_timelocked,squidgrad_timelocked,opm_timelocked,headmodels,sourcemodel,[],params); 
+            close all
         end
-        close all
     end
 end
 
