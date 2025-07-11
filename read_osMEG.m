@@ -1,4 +1,4 @@
-function [data, badchs] = read_osMEG(opm_file, aux_file, save_path, params)
+function [data_cleaned] = read_osMEG(opm_file, aux_file, save_path, params)
 %prprocess_osMEG Read on-scalp MEG data for benchmarking
 % recordings and combine with auxiliary TRIUX data/EEG. 
 % Requires the following arguments:
@@ -154,14 +154,6 @@ else
     data = opm_epo_ds;
 end
 
-%% Remove padding
-cfg = [];
-cfg.latency = [-params.pre params.post];
-data = ft_selectdata(cfg, data); 
-
-%% Convert to sensor definitions to cm
-data.grad = ft_convert_units(data.grad,'cm');
-
 %% Find bad opm channels
 [badchs, badchs_flat, badchs_std, badchs_neighbors, badchs_outlier] = opm_badchannels(opm_raw, trl_opm, params);
 save(fullfile(save_path, [params.paradigm '_badchs']), ...
@@ -169,6 +161,82 @@ save(fullfile(save_path, [params.paradigm '_badchs']), ...
     'badchs_std', ...
     'badchs_neighbors', ...
     'badchs_outlier',"-v7.3"); 
-clear opm_raw
+
+cfg = [];
+cfg.channel = setdiff(data.label,badchs_opm);
+data = ft_selectdata(cfg, data);
+
+%% Spatiotemporal filtering
+cfg = []; % separate ExG channels
+cfg.channel = {'EOG*', 'ECG*'};
+ExG = ft_selectdata(cfg,data);
+
+if params.do_hfc
+    cfg = [];
+    cfg.channel = '*bz';
+    cfg.order = params.hfc_order;
+    cfg.residualcheck = 'no';
+    data_cleaned = ft_denoise_hfc(cfg, data);
+elseif params.do_amm
+    cfg = [];
+    cfg.channel = '*bz';
+    cfg.updatesens = 'yes';
+    cfg.residualcheck = 'no';
+    cfg.amm = [];
+    cfg.amm.order_in = params.amm_in;
+    cfg.amm.order_out = params.amm_out;
+    cfg.amm.thr = params.amm_thr;
+    data_cleaned = ft_denoise_amm(cfg, data);
+else
+    data_cleaned = data;
+end
+
+% Recombine with ExG channels
+data_cleaned.label = vertcat(data_cleaned.label,ExG.label);
+data_cleaned.hdr = comb.hdr;
+incl = ismember(comb.hdr.label,data_cleaned.label);
+data_cleaned.hdr.label = comb.hdr.label(incl);
+data_cleaned.hdr.chantype = comb.hdr.chantype(incl);
+data_cleaned.hdr.chanunit = comb.hdr.chanunit (incl);
+for i = 1:length(data_cleaned.trial)
+    data_cleaned.trial{i} = vertcat(data_cleaned.trial{i}, ExG.trial{i}); 
+end
+
+%% Reject jump trials
+cfg = [];
+cfg.channel = {'*bz'};
+cfg.metric = 'maxzvalue';
+cfg.preproc.medianfilter  = 'yes';
+cfg.preproc.medianfiltord  = 9;
+cfg.preproc.absdiff       = 'yes';
+cfg.threshold = params.z_threshold;
+[cfg,badtrl_jump] = ft_badsegment(cfg, data_cleaned);
+data_cleaned = ft_rejectartifact(cfg,data_cleaned);
+
+%% Reject noisy trials
+cfg = [];
+cfg.channel = {'*bz'};
+cfg.metric = 'std';
+cfg.threshold = params.opm_std_threshold;
+[cfg,badtrl_std] = ft_badsegment(cfg, data_cleaned);
+data_cleaned = ft_rejectartifact(cfg,data_cleaned);
+
+%% Remove padding
+cfg = [];
+cfg.latency = [-params.pre params.post];
+data_cleaned = ft_selectdata(cfg, data_cleaned); 
+
+%% Convert to sensor definitions to cm
+data_cleaned.grad = ft_convert_units(data_cleaned.grad,'cm');
+
+%% Find bad opm channels
+
+[~,idx]=ismember(opm_cleaned.sampleinfo,badtrl_jump,'rows');
+badtrl_opm_jump = find(idx);
+[~,idx]=ismember(opm_cleaned.sampleinfo,badtrl_std,'rows');
+badtrl_opm_std = find(idx);
+save(fullfile(save_path, [params.sub '_opm_badtrls']), ...
+    'badtrl_opm_jump', ...
+    'badtrl_opm_std',"-v7.3"); 
 
 end

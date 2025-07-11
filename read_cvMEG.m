@@ -29,9 +29,14 @@ trl = round(trl);
 cfg = [];
 cfg.lpfilter        = 'yes';         
 cfg.lpfreq          = params.filter.lp_freq;
-cfg.hpfilter        = 'yes';         
-cfg.hpfreq          = params.filter.hp_freq;
-cfg.hpinstabilityfix  = 'reduce';
+if ~isempty(params.filter.hp_freq)
+    cfg.hpfilter        = 'yes'; 
+    cfg.hpfreq          = params.filter.hp_freq;
+    cfg.hpinstabilityfix  = 'reduce';
+    if params.filter.hp_freq<1
+        cfg.hpfilttype = 'firws';
+    end
+end
 data = ft_preprocessing(cfg, data_raw);
 
 cfg = [];
@@ -44,6 +49,44 @@ cfg.dftfreq         = params.filter.notch;
 cfg.demean          = 'yes';
 cfg.baselinewindow  = [-params.pre 0];
 data = ft_preprocessing(cfg, data);
+
+
+%% Reject jump trials
+cfg = [];
+cfg.channel = {'megmag'};
+cfg.metric = 'maxzvalue';
+cfg.preproc.medianfilter  = 'yes';
+cfg.preproc.medianfiltord  = 9;
+cfg.preproc.absdiff       = 'yes';
+cfg.threshold = params.z_threshold;
+[cfg,badtrl_jump] = ft_badsegment(cfg, data);
+data = ft_rejectartifact(cfg,data);
+
+%% Reject noisy trials
+cfg = [];
+cfg.channel = 'megmag';
+cfg.metric = 'std';
+cfg.threshold = params.squidmag_std_threshold;
+[cfg,badtrl_squidmag_std] = ft_badsegment(cfg, data);
+data = ft_rejectartifact(cfg,data);
+
+cfg = [];
+cfg.channel = 'megplanar';
+cfg.metric = 'std';
+cfg.threshold = params.squidgrad_std_threshold;
+[cfg,badtrl_squidgrad_std] = ft_badsegment(cfg, data);
+data = ft_rejectartifact(cfg,data);
+
+%% Remove bad trials
+[~,idx]=ismember(data.sampleinfo,badtrl_jump,'rows');
+badtrl_jump = find(idx);
+[~,idx]=ismember(squid_cleaned.sampleinfo,badtrl_squidmag_std,'rows');
+badtrl_std = find(idx);
+[~,idx]=ismember(squid_cleaned.sampleinfo,badtrl_squidgrad_std,'rows');
+badtrl_std = unique([badtrl_std; find(idx)]);
+save(fullfile(save_path, [params.paradigm '_badtrls']), ...
+    'badtrl_jump', ...
+    'badtrl_std', "-v7.3"); 
 
 %% Remove padding
 cfg = [];
