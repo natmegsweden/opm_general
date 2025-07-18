@@ -7,8 +7,8 @@ function [data_ica] = ica_MEG(data,save_path,params)
 % applied if the frequency is defined), n_comp and coh_cutoff (for 
 % automated ICA), and ds_freq (downsampling frequency).
 
-save_results     = ft_getopt(params, 'save_ica', 1);
-manual_ica     = ft_getopt(params, 'manual_ica', 0);
+save_results     = ft_getopt(params, 'save_ica', 1); % whether the components should be saved or not
+manual_ica     = ft_getopt(params, 'manual_ica', 0); % set to 1 if components should be selected manually (e.g., due to lack of ECG/EOG)
 
 %% Downsample
 cfg             = [];

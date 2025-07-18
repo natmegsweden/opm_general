@@ -1,7 +1,17 @@
-function prepare_mri(mri_file,meg_file,save_path)
-%UNTITLED2 Summary of this function goes here
-%   Detailed explanation goes here
+function prepare_mri(mri_path,meg_file,save_path, params)
+%Prepare_mri Prepare headmodel, sourcemodels and mri for MEG analysis
+%   Requires the following inputs:
+%   mri_path: path to freesurfer folder containing MRIs and workbench
+%             cortical surface meshes
+%   meg_file: path to a meg file containing polhemus points for
+%             co-registration
+%   save_path: path where to save the results
 
+    if ~isfield(params,'src_density')
+        params.src_density = '8'; % default source density to use. Results in ~16k sources
+    end
+
+    mri_file = fullfile(mri_path, 'mri', 'orig','001.mgz');
     if ~exist(mri_file,'file')
         error(['Did not find MRI file: ' mri_file])
     end
@@ -12,17 +22,14 @@ function prepare_mri(mri_file,meg_file,save_path)
 
     %% Read data
     headshape = ft_read_headshape(meg_file);
-    grad    = ft_read_sens(meg_file,'senstype','meg'); % Load MEG sensors
-    elec    = ft_read_sens(meg_file,'senstype','eeg'); % Load EEG electrodes
     mri = ft_read_mri(mri_file);
-    
-    %% Align fiducials
-    ft_sourceplot([], mri);
-    mri_coordsys = ft_determine_coordsys(mri);
+    mri.coordsys = 'ras';
+
+    %% Prealign with fiducials
     cfg = [];
     cfg.method   = 'interactive';
     cfg.coordsys = 'neuromag';
-    mri_realigned_1 = ft_volumerealign(cfg, mri_coordsys);
+    mri_realigned_1 = ft_volumerealign(cfg, mri);
 
     %% ICP align
     cfg = [];
@@ -38,10 +45,6 @@ function prepare_mri(mri_file,meg_file,save_path)
     mri_realigned_2 = ft_volumerealign(cfg, mri_realigned_2);
     
     %% Reslice MRI
-    %cfg = [];
-    %cfg.resolution = 1;
-    %mri_resliced = ft_volumereslice(cfg, mri_realigned_2);
-    %mri_resliced = ft_convert_units(mri_resliced, 'cm');
     mri_resliced = ft_convert_units(mri_realigned_2, 'cm');
     
     save(fullfile(save_path, 'mri_resliced.mat'), 'mri_resliced'); disp('done')
@@ -106,54 +109,60 @@ function prepare_mri(mri_file,meg_file,save_path)
     catch 
         headmodel_eeg = [];
     end
-    %% Plot
-    figure
-    ft_plot_sens(grad)
-    ft_plot_headshape(headshape)
-    ft_plot_mesh(mesh_scalp,'EdgeAlpha',0,'FaceAlpha',0.5,'FaceColor',[229 194 152]/256)
-    ft_plot_headmodel(headmodel_meg)
-    ft_plot_axes([], 'unit', 'cm','coordsys','neuromag');
-   
-    
-    %%
-    figure
-    ft_plot_sens(elec, 'style', 'ok','elecsize',10);
-    ft_plot_headshape(headshape);
-    ft_plot_headmodel(headmodel_eeg,'facealpha', 0.5,'FaceColor',[229 194 152]/256)
-    ft_plot_axes([], 'unit', 'cm');
-
-    %%
-    %headshape = ft_read_headshape(aux_file);
-    %hpi_polhemus = headshape.pos(find(contains(headshape.label,'hpi')),:);
-    %headshape_tf = headshape;
-    %headshape_tf.pos = opm_trans.transformPointsForward(headshape.pos);
-    %hpi_polhemus_tf = headshape_tf.pos(find(contains(headshape.label,'hpi')),:);
-    
-    %meshes_opm = meshes;
-    %meshes_opm(1).pos = opm_trans.transformPointsForward(meshes_opm(1).pos);
-    %meshes_opm(2).pos = opm_trans.transformPointsForward(meshes_opm(2).pos);
-    %meshes_opm(3).pos = opm_trans.transformPointsForward(meshes_opm(3).pos);
-
-    %headmodel_opm = headmodel_meg;
-    %headmodel_opm.bnd.pos = opm_trans.transformPointsForward(headmodel_opm.bnd.pos);
-
-    %headmodel_opmeeg = headmodel_eeg;
-    %headmodel_opmeeg.bnd(1).pos = opm_trans.transformPointsForward(headmodel_opmeeg.bnd(1).pos);
-    %headmodel_opmeeg.bnd(2).pos = opm_trans.transformPointsForward(headmodel_opmeeg.bnd(2).pos);
-    %headmodel_opmeeg.bnd(3).pos = opm_trans.transformPointsForward(headmodel_opmeeg.bnd(3).pos);
 
     %%
     headmodels = [];
     headmodels.headmodel_meg = headmodel_meg;
-    %headmodels.headmodel_opm = headmodel_opm;
     headmodels.headmodel_eeg = headmodel_eeg;
-    %headmodels.headmodel_opmeeg = headmodel_opmeeg;
-
-    %meshes = [];
-    %meshes.meg = meshes_meg;
-    %meshes.opm = meshes_opm;
 
     %% Save
     save(fullfile(save_path, 'headmodels.mat'), 'headmodels');
     save(fullfile(save_path, 'meshes.mat'), 'meshes');
+
+    %% Sourcemodel
+    % Read and transform cortical restrained source model
+    clear sourcemodel sourcemodel_inflated
+    files = dir(fullfile(mri_path,'workbench'));
+    for i = 1:length(files)
+        if endsWith(files(i).name,['.L.midthickness.' params.src_density 'k_fs_LR.surf.gii'])
+            filename = fullfile(mri_path,'workbench',files(i).name);
+        elseif endsWith(files(i).name,['.L.aparc.' params.src_density 'k_fs_LR.label.gii'])
+            filename2 = fullfile(mri_path,'workbench',files(i).name);
+        end
+    end
+    sourcemodel = ft_read_headshape({filename, strrep(filename, '.L.', '.R.')});
+
+    aparc_L = ft_read_atlas({filename2,filename});
+    aparc_R = ft_read_atlas({strrep(filename2,'.L.','.R.'),strrep(filename,'.L.','.R.')});
+    tmp = ft_read_atlas(strrep(filename2, '.L.', '.R.'),'format','caret_label');
+    n_labels = length(aparc_L.parcellationlabel);
+    atlas = [];
+    atlas.parcellationlabel = [aparc_L.parcellationlabel; aparc_R.parcellationlabel];
+    atlas.parcellation = [aparc_L.parcellation; aparc_R.parcellation + n_labels];
+    atlas.rgba = [aparc_L.rgba; aparc_R.rgba; [0 0 0 1]];
+    n_labels = length(atlas.parcellationlabel);
+    atlas.parcellation(isnan(atlas.parcellation))=n_labels+1;
+    sourcemodel.brainstructure = atlas.parcellation;
+    sourcemodel.brainstructurelabel = atlas.parcellationlabel;
+    sourcemodel.brainstructurecolor = atlas.rgba;
+    clear atlas aparc_L aparc_R
+
+    T = mri_resliced.transform/mri_resliced.hdr.vox2ras;
+    sourcemodel = ft_transform_geometry(T, sourcemodel);
+    sourcemodel.inside = true(size(sourcemodel.pos,1),1);
+
+    for i = 1:length(files)
+        if endsWith(files(i).name,'.L.inflated.8k_fs_LR.surf.gii')
+            filename = fullfile(mri_path,'workbench',files(i).name);
+        end
+    end
+    sourcemodel_inflated = ft_read_headshape({filename, strrep(filename, '.L.', '.R.')});
+    sourcemodel_inflated = ft_transform_geometry(T, sourcemodel_inflated);
+    sourcemodel_inflated.inside = true(size(sourcemodel_inflated.pos,1),1);
+    sourcemodel_inflated.brainstructure = sourcemodel.brainstructure;
+    sourcemodel_inflated.brainstructurelabel = sourcemodel.brainstructurelabel;
+    sourcemodel_inflated.brainstructurecolor = sourcemodel.brainstructurecolor;
+
+    save(fullfile(save_path, 'sourcemodel'), 'sourcemodel', '-v7.3');
+    save(fullfile(save_path, 'sourcemodel_inflated'), 'sourcemodel_inflated', '-v7.3');
 end

@@ -52,8 +52,6 @@ params.filter.hp_freq = 1; % Highpass cutoff frequency
 params.filter.lp_freq = 50; % Lowpass cutoff frequency
 params.filter.notch = sort([50 60 100 120]); % Notch (bandstop) filter frequencies
 
-params.ds_freq = 1000; % Downsample frequency. If empty or not defined no downsampling will be applied
-
 params.apply_hfc = true; % Apply Homogenous Field Correction
 params.hfc_order = 1; % Order for Homogenous Field Correction: 1..3
 
@@ -80,7 +78,7 @@ params.trigger_codes = [3 5 9]; % Trigger values to timelock
 params.trigger_labels = {'short', 'middle', 'long'}; % Labels corresponding to the trigger values
 
 params.src_density = '8'; % Sourcemodel density ('4', '8' or '32') = approximate number of sources per hemisphere
-params.source_fixedori = true; % use fixed orientation sources (along vertex normals); if false: use three orthogonal sources per location
+params.source_fixedori = true; % use fixed orientation (along
 params.use_cov = 'resting_state'; % noise cov to use; default= ' ' for prestim, alt: 'resting_state', 'empty_room'
 
 params.modality = 'opm';

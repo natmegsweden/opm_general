@@ -1,30 +1,14 @@
 function opm_trans = fit_hpi(hpi_path, aux_file, save_path, params)
-% fit hpi coils and co-register with polhemus digitization 
+%prprocess_osMEG Read on-scalp MEG data for benchmarking
 % recordings and combine with auxiliary TRIUX data/EEG. 
 % Requires the following arguments:
-% hpi_path : path where hpi recordings are found
-% aux_file : path where a TRIUX recording with corresponding polhemus
-% localization can be found
-% save_path : path where figures and resulting transform are saved
-% params: should contain fields 
-% params.hpi_freq : frequency at which HPI coils were activated (typ.: 33 [Hz])
-% params.hpi_gof : goodness-of-fit threshold for using hpi coils for
-% transform
-% params.z_threshold : threshold for rejecting jump trials (typ.: 20); same
-% as used for data preprocessing
+% Path: containing save_path and meg_file
+% Params: hpi_freq.
 
-if ~exist(aux_file,'file')
-    error(['Did not find aux file with headshape: ' aux_file])
-end
 
-hpi_files = dir(fullfile(hpi_path,['*HPI*_raw.fif']));
-if isempty(hpi_files)
-    error(['No HPI files found at path: ' hpi_path])
-end
+hpi_files = dir(fullfile(hpi_path,'*HPI*_raw.fif'));
+
 hpi = cell(length(hpi_files),1);
-hpi2 = hpi;
-
-params.include_chs = params.include_chs(contains(params.include_chs,'bz'));
 
 for i_file = 1:length(hpi_files)
     %% --- Read triggers ---
@@ -65,7 +49,7 @@ for i_file = 1:length(hpi_files)
     hpi_labels2 = hpi_labels;
     hpi_trials = false(length(hpi_chs),length(epo.trial));
     for trl = 1:length(epo.trial)
-        hpi_trials(:,trl) = (max(epo.trial{trl}(hpi_chs,:),[],2)-min(epo.trial{trl}(hpi_chs,:),[],2))>1e-4;
+        hpi_trials(:,trl) = (max(epo.trial{trl}(hpi_chs,:),[],2)-min(epo.trial{trl}(hpi_chs,:),[],2))>1e-3;
     end
     
     for i = 1:length(hpi_chs)
@@ -95,6 +79,7 @@ for i_file = 1:length(hpi_files)
     hpi{i_file}.dip_gof = zeros(length(hpi_chs),1);
 
     hpi2{i_file} = [];
+
     for coil = 1:length(hpi_chs)
         % Lock-in
         R = zeros(size(epo.trial{hpi_trl{coil}(1)},1),length(hpi_trl{coil}));
@@ -110,16 +95,14 @@ for i_file = 1:length(hpi_files)
         amp(abs(mean(Theta,2))>pi/2,coil) = -amp(abs(mean(Theta,2))>pi/2,coil);
         
         timelocked.avg = amp(:,coil);
-
-        if false 
-            cfg = [];
-            cfg.layout = 'fieldlinebeta2bz_helmet.mat'; 
-            cfg.parameter = 'avg';
-            cfg.channel = params.include_chs;
-            h = figure; ft_topoplotER(cfg,timelocked); colorbar
-            saveas(h, fullfile(save_path, 'figs', ['hpi_topo_coil-' num2str(coil) '.jpg']))
-            close
-        end
+    
+%         cfg = [];
+%         cfg.layout = 'fieldlinebeta2bz_helmet.mat'; 
+%         cfg.parameter = 'avg';
+%         cfg.channel = params.include_chs;
+%         h = figure; ft_topoplotER(cfg,timelocked); colorbar
+%         saveas(h, fullfile(save_path, 'figs', ['hpi_topo_coil-' num2str(coil) '.jpg']))
+%         close
         disp(['Max amp: ' num2str(max(abs(timelocked.avg(find(contains(timelocked.label,'bz'))))))])
     
         if any(abs(timelocked.avg(find(contains(timelocked.label,'bz')))) > 1e-11)
@@ -170,6 +153,10 @@ for i_file = 1:length(hpi_files)
         end
     end
     
+    if isempty(hpi_chs)
+        hpi{i_file}.dip_gof(coil) = 0;
+    end
+    
     %%
     % Adjust order
     ft_hastoolbox('mne',1);
@@ -180,7 +167,7 @@ for i_file = 1:length(hpi_files)
     hpi2{i_file}.dip_pos(i_min,:) = hpi{i_file}.dip_pos(hpi{i_file}.dip_include,:);
     hpi2{i_file}.dip_ori(i_min,:) = hpi{i_file}.dip_ori(hpi{i_file}.dip_include,:);
     hpi2{i_file}.dip_include(i_min) = hpi{i_file}.dip_include(hpi{i_file}.dip_include);
-    hpi2{i_file}.dip_gof(i_min) = hpi{i_file}.dip_gof(hpi{i_file}.dip_include);
+    hpi2{i_file}.dip_gof(i_min,:) = hpi{i_file}.dip_gof(hpi{i_file}.dip_include);
     hpi_labels2(i_min) = hpi_labels(hpi{i_file}.dip_include);
     
     ft_hastoolbox('mne',1);
@@ -199,8 +186,6 @@ for i_file = 1:length(hpi_files)
         epoT.grad.coilpos = opm_trans.transformPointsForward(epo.grad.coilpos);
         epoT.grad.chanori = (opm_trans.Rotation'*epoT.grad.chanori')';
         epoT.grad.coilori = (opm_trans.Rotation'*epoT.grad.coilori')';
-        %epoT.grad.chanpos = opm_trans.transformPointsForward(epo.grad.chanpos*1e2)*1e-2;
-        %epoT.grad.coilpos = opm_trans.transformPointsForward(epo.grad.coilpos*1e2)*1e-2;
         
         %%
         colors = [[0.8500 0.3250 0.0980]; [0.9290 0.6940 0.1250]; [0.4940 0.1840 0.5560]; [0.4660 0.6740 0.1880]; [0.6350 0.0780 0.1840]];
@@ -209,7 +194,7 @@ for i_file = 1:length(hpi_files)
         ft_plot_sens(epoT.grad,'unit','cm','DisplayName','senspos'); 
         hold on 
         for coil = find(hpi2{i_file}.dip_include)'
-            quiver3(hpi2{i_file}.dip_pos_tf(coil,1),hpi2{i_file}.dip_pos_tf(coil,2),hpi2{i_file}.dip_pos_tf(coil,3),hpi2{i_file}.dip_ori_tf(coil,1),hpi2{i_file}.dip_ori_tf(coil,2),hpi2{i_file}.dip_ori_tf(coil,3),'*','Color',colors(coil,:),'DisplayName',['hpi' hpi_labels2{coil}((end-2):end) ' (GOF=' num2str((hpi{i_file}.dip_gof(coil))*100,'%.2f') '%)'],'LineWidth',2);
+            quiver3(hpi2{i_file}.dip_pos_tf(coil,1),hpi2{i_file}.dip_pos_tf(coil,2),hpi2{i_file}.dip_pos_tf(coil,3),hpi2{i_file}.dip_ori_tf(coil,1),hpi2{i_file}.dip_ori_tf(coil,2),hpi2{i_file}.dip_ori_tf(coil,3),'*','Color',colors(coil,:),'DisplayName',['hpi' hpi_labels2{coil}((end-2):end) ' (GOF=' num2str((hpi2{i_file}.dip_gof(coil))*100,'%.2f') '%)'],'LineWidth',2);
         end
         scatter3(hpi_polhemus(:,1),hpi_polhemus(:,2),hpi_polhemus(:,3),'r','DisplayName','polhemus'); 
         scatter3(headshape.fid.pos(:,1),headshape.fid.pos(:,2),headshape.fid.pos(:,3),'g.','DisplayName','fiducials'); 
@@ -218,7 +203,7 @@ for i_file = 1:length(hpi_files)
         hold off
         title(['HPI fits (mean dist = ' num2str(dist*10) ' mm)'])
         legend('Location','eastoutside')
-        saveas(h, fullfile(save_path, 'figs', ['hpi_fits-' num2str(i_file) '.jpg']))
+        saveas(h, fullfile(save_path, ['hpi_fits-' num2str(i_file) '.jpg']))
     catch
         warning(['PCregister failed on hpi-file: ' hpi_files(i_file).name ])
         hpi2{i}.dip_gof = 0;
@@ -229,10 +214,14 @@ end
 for i = 1:length(hpi_files)
     gofsum(i) = sum(hpi2{i}.dip_gof);
 end
-[~,i_bestfit] = max(gofsum);
-hpi_fit = hpi2{i_bestfit};
-save(fullfile(save_path, 'hpi_fit'), 'hpi_fit'); disp('done');
-opm_trans =  hpi2{i_bestfit}.opm_trans;
-save(fullfile(save_path, 'opm_trans'), 'opm_trans'); disp('done');
+[max_gofsum,i_bestfit] = max(gofsum);
+if max_gofsum >= params.hpi_gof*3 % best fit needs to have at least 3 good coils for reasonable transform
+    hpi_fit = hpi2{i_bestfit};
+    save(fullfile(save_path, 'hpi_fit'), 'hpi_fit'); disp('done');
+    opm_trans =  hpi2{i_bestfit}.opm_trans;
+    save(fullfile(save_path, 'opm_trans'), 'opm_trans'); disp('done');
+else 
+    opm_trans = [];
+end
 
 end

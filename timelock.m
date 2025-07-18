@@ -1,8 +1,18 @@
 function [timelocked] = timelock(data, save_path, params)
-%UNTITLED2 Summary of this function goes here
-%   Detailed explanation goes here
-amp_label     = ft_getopt(params, 'amp_label', 'na');
-amp_scaler     = ft_getopt(params, 'amp_scaler', 1);
+%Timelock Average trial/epoch data and plot
+%   Averages trials/epochs for each trigger defined in params.trigger_codes
+%   and plots a butterfly (with global field power). If a plot_channel or
+%   plot_latency are selected in params the function will generate a plot
+%   of the channel with variation over trials and topography of the
+%   latency, respectively. For the topogrpahy a layout should also be
+%   defined in params. 
+%   Required inputs:
+%   data: data containg individual trials
+%   save_path: path where to save the generated figures
+%   params: parameter struct
+
+amp_label     = ft_getopt(params, 'amp_label', 'na'); % used for yaxis of the figures generated (ex: 'B [fT]')
+amp_scaler     = ft_getopt(params, 'amp_scaler', 1); % scaling factor used for figures (ex: 1e15 to display signals in fT)
 
 timelocked = cell(length(params.trigger_codes),1);
 
@@ -19,26 +29,52 @@ cfg.baselinewindow = [-params.pre 0];
 data = ft_preprocessing(cfg,data);
 
 for i_trigger = 1:length(params.trigger_codes)
+    % Select trials
+    if isnumeric(params.trigger_codes{i_trigger}) && length(params.trigger_codes{i_trigger})==1 % trigger code
+        trls = find(data.trialinfo==params.trigger_codes{i_trigger});
+    elseif isnumeric(params.trigger_codes{i_trigger}) && length(params.trigger_codes{i_trigger})>1 % list of trials
+        trls = params.trigger_codes{i_trigger};
+    elseif ischar(params.trigger_codes{i_trigger}) && strcmp(params.trigger_codes{i_trigger},'all') %
+        trls = 1:length(data.trial);
+    end
+
     % Average trials
     cfg = [];
     cfg.covariance          = 'yes';
     cfg.covariancewindow    = [-params.pre 0];
-    cfg.trials = find(data.trialinfo==params.trigger_codes(i_trigger));
+    cfg.trials = trls;
     timelocked{i_trigger} = ft_timelockanalysis(cfg, data);
     timelocked{i_trigger}.trigger_code = params.trigger_codes(i_trigger);
     timelocked{i_trigger}.trigger_label = params.trigger_labels(i_trigger);
 
-    % Butterfly plot
-    chs = find(contains(timelocked{i_trigger}.label,ft_channelselection(params.chs,timelocked{i_trigger}.label)));
+    %% Plot butterfly
     h = figure;
-    plot(timelocked{i_trigger}.time*1e3,timelocked{i_trigger}.avg(chs,:)*amp_scaler)
+    left = 0.1;
+    bottom = 0.1;
+    width = 0.8;
+    gap = 0.10;  % gap between plots
+    height_total = 0.8 - gap;  
+    height_top = 3/4 * height_total;
+    height_bottom = 1/4 * height_total;
+    
+    % Butterfly
+    ax1 = axes('Position', [left, bottom + height_bottom + gap, width, height_top]);
+    plot(dat.time*1e3,timelocked{i_trigger}.avg*params.amp_scaler)
     xlabel('t [msec]')
-    ylabel(amp_label)
-    %xlim([-params.pre params.post]*1e3);
-    title(['Evoked - ' params.trigger_labels{i_trigger} ' (n_{trls}=' num2str(length(timelocked{i_trigger}.cfg.trials)) ')'])
-    saveas(h, fullfile(save_path, 'figs', [params.paradigm '_butterflyPlot_trig-' params.trigger_labels{i_trigger} '_' params.modality '.jpg']))
+    ylabel(params.amp_label)
+    xlim([-params.pre params.post]*1e3);
+    title(['Evoked ' params.modality ' - ' params.trigger_labels{i_trigger} ' (n_{trls}=' num2str(length(timelocked{i_trigger}.cfg.trials)) ')'])
+    
+    % GFP
+    ax2 = axes('Position', [left, bottom, width, height_bottom]);
+    plot(timelocked{i_trigger}.time*1e3,std(timelocked{i_trigger}.avg,0,1)*params.amp_scaler,'k')
+    ax2.XTickLabel = [];
+    ylabel('GFP')
+    xlim([-params.pre params.post]*1e3);
+    saveas(h, fullfile(save_path, 'figs', [params.sub '_' params.modality '_' params.peaks{i_peak}.label '_butterfly_trig-' params.trigger_labels{i_trigger} '.jpg']))
     close all
 
+    %% Plot selected channel
     if isfield(params,'plot_channel') && sum(contains(timelocked{i_trigger}.label,params.plot_channel)) == 1 % only if a single channel is selected
         i_plot_ch = find(contains(timelocked{i_trigger}.label,params.plot_channel)); % pick like 'L204' or 'L204_bz' 
         h = figure;
@@ -51,11 +87,12 @@ for i_trigger = 1:length(params.trigger_codes)
         title(['Channel: ' params.plot_channel])
         ylabel(amp_label)
         xlabel('time [ms]')
-        %xlim([-params.pre params.post]*1e3);
+        xlim([-params.pre params.post]*1e3);
         saveas(h, fullfile(save_path, 'figs', [params.paradigm '_evoked-' params.plot_channel '_trig-' params.trigger_labels{i_trigger} '_' params.modality '.jpg']))
         close all
     end
 
+    %% Plot topogrpaphy at selected time
     if isfield(params,'plot_latency') % latency to plot topogrpaphy at in seconds
         cfg = [];
         cfg.xlim = [params.plot_latency-0.010 params.plot_latency+0.010];

@@ -73,30 +73,10 @@ cfg.dftfilter       = 'yes';
 cfg.dftfreq         = [40 50 60 80 100 ];
 data_epo = ft_preprocessing(cfg,data_epo);
 
-%% Zmax
-% n_trls = length(data_epo.trial);
-% trial_std = zeros(n_chs,length(data_epo.trial));
-% z_max = zeros(n_chs,length(data_epo.trial));
-% for trial = 1:n_trls
-%     dat = data_epo.trial{trial}(chs,:);
-%     dat = diff(movmean(dat,9*data_epo.fsample/1000,2),1,2);
-%     dat = dat(:,1:(end-5));
-%     trial_std(:,trial) = std(dat,0,2);
-%     trial_mean = repmat(mean(dat,2),[1 size(dat,2)]);
-%     z_max(:,trial) = max(abs(dat-trial_mean),[],2);
-% end    
-% z_max = z_max./repmat(mean(trial_std,2),[1 n_trls]);
-% 
-% badchs_zmax = find(sum(z_max>z_threshold,2)>(n_trls*njump_threshold));
-
 %% Spectrum
 goodchs = setdiff(chs,badchs);
 
-% badtrls_zmax = find(sum(z_max(goodchs,:)>z_threshold,1)>1);
-% goodtrls = setdiff(1:length(data_epo.trial),badtrls_zmax);
-
 cfg = [];
-% cfg.trials = goodtrls;
 cfg.output = 'pow';
 cfg.method = 'mtmfft';
 cfg.taper = 'hanning';
@@ -108,13 +88,9 @@ badchs_outlier = find(mean(freq.powspctrm>repmat(threshold,[size(freq.powspctrm,
 
 badchs = [badchs_flat; badchs_std; badchs_neighbors; badchs_outlier];
 
-% Bad trials (jumps)
-% badtrls_zmax = find(sum(z_max(goodchs,:)>z_threshold,1)>1);
-
 % Convert to channel labels
 badchs = data.label(chs(badchs));
 badchs_flat = data.label(chs(badchs_flat));
 badchs_std = data.label(chs(badchs_std));
 badchs_neighbors = data.label(chs(badchs_neighbors));
-% badchs_zmax = data.label(chs(badchs_zmax));
 badchs_outlier = data.label(chs(badchs_outlier));

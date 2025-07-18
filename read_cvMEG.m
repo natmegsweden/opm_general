@@ -1,8 +1,9 @@
-function data = read_cvMEG(squid_file, params)
+function data = read_cvMEG(squid_file, save_path, params)
 %prprocess_osMEG Read on-scalp MEG data for benchmarking
 % recordings and combine with auxiliary TRIUX data/EEG. 
 % Requires the following arguments:
-% Path: containing save_path and meg_file
+% squid_file: path to file containg SQUID-MEG recording
+% save_path: path where to save data
 % Params: containing pre, post (pre- and poststim), and ds_freq 
 % (downsampling frequency).
 
@@ -33,11 +34,9 @@ if ~isempty(params.filter.hp_freq)
     cfg.hpfilter        = 'yes'; 
     cfg.hpfreq          = params.filter.hp_freq;
     cfg.hpinstabilityfix  = 'reduce';
-    if params.filter.hp_freq<1
-        cfg.hpfilttype = 'firws';
-    end
 end
 data = ft_preprocessing(cfg, data_raw);
+clear data_raw
 
 cfg = [];
 cfg.trl             = trl;
@@ -88,6 +87,13 @@ save(fullfile(save_path, [params.paradigm '_badtrls']), ...
     'badtrl_jump', ...
     'badtrl_std', "-v7.3"); 
 
+%% Downsample
+if isfield(params,'ds_freq') && ~isempty(params.ds_freq) && params.ds_freq~=1000
+    cfg = [];
+    cfg.resamplefs = params.ds_freq;
+    data = ft_resampledata(cfg, data);
+end
+
 %% Remove padding
 cfg = [];
 cfg.latency = [-params.pre params.post];
@@ -95,7 +101,5 @@ data = ft_selectdata(cfg, data);
 
 %% Convert to sensor definitions to cm
 data.grad = ft_convert_units(data.grad,'cm');
-
-clear data_raw
 
 end

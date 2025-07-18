@@ -1,9 +1,12 @@
-function [data_cleaned] = read_osMEG(opm_file, aux_file, save_path, params)
+function [data] = read_osMEG(opm_file, aux_file, save_path, params)
 %prprocess_osMEG Read on-scalp MEG data for benchmarking
 % recordings and combine with auxiliary TRIUX data/EEG. 
 % Requires the following arguments:
-% Path: containing save_path and meg_file
-% Params: containing pre, post (pre- and poststim), and ds_freq 
+% opm_file: path to the file containing the OPM-MEG data
+% aux_file: path to synchronously recorded file containing ECG, EOG and/or
+%           EEG. If not appliccable set to []
+% save_path: path where to save results
+% params: containing pre, post (pre- and poststim), and ds_freq 
 % (downsampling frequency).
 
 if ~exist(opm_file,'file')
@@ -65,15 +68,11 @@ if ~opm_only
     
     %% AUX data filter & epoch
     cfg = [];
-    %cfg.datafile        = aux_file;
-    %cfg.trl             = trl_aux;
     cfg.lpfilter        = 'yes';         
     cfg.lpfreq          = params.filter.lp_freq;
     cfg.hpfilter        = 'yes'; 
     cfg.hpfreq          = params.filter.hp_freq;
     cfg.hpinstabilityfix  = 'reduce';
-    %cfg.padding         = params.pre + params.post + 1;
-    %cfg.paddingtype     = 'data';
     aux_epo = ft_preprocessing(cfg,aux_raw);
     
     cfg = [];
@@ -90,17 +89,11 @@ end
 
 %% OPM data filter & epoch
 cfg = [];
-%cfg.datafile        = opm_file;
-%cfg.coordsys        = 'dewar';
-%cfg.coilaccuracy    = 0;
-%cfg.trl             = trl_opm;
 cfg.lpfilter        = 'yes';         
 cfg.lpfreq          = params.filter.lp_freq;
 cfg.hpfilter        = 'yes';         
 cfg.hpfreq          = params.filter.hp_freq;
 cfg.hpinstabilityfix  = 'reduce';
-%cfg.padding         = params.pre + params.post + 3;
-%cfg.paddingtype     = 'data';
 opm_epo = ft_preprocessing(cfg, opm_raw);
 
 cfg = [];
@@ -154,7 +147,7 @@ else
     data = opm_epo_ds;
 end
 
-%% Find bad opm channels
+%% Find & remove bad opm channels
 [badchs, badchs_flat, badchs_std, badchs_neighbors, badchs_outlier] = opm_badchannels(opm_raw, trl_opm, params);
 save(fullfile(save_path, [params.paradigm '_badchs']), ...
     'badchs_flat', ...
@@ -163,7 +156,7 @@ save(fullfile(save_path, [params.paradigm '_badchs']), ...
     'badchs_outlier',"-v7.3"); 
 
 cfg = [];
-cfg.channel = setdiff(data.label,badchs_opm);
+cfg.channel = setdiff(data.label,badchs);
 data = ft_selectdata(cfg, data);
 
 %% Spatiotemporal filtering
@@ -176,7 +169,7 @@ if params.do_hfc
     cfg.channel = '*bz';
     cfg.order = params.hfc_order;
     cfg.residualcheck = 'no';
-    data_cleaned = ft_denoise_hfc(cfg, data);
+    data = ft_denoise_hfc(cfg, data);
 elseif params.do_amm
     cfg = [];
     cfg.channel = '*bz';
@@ -186,20 +179,20 @@ elseif params.do_amm
     cfg.amm.order_in = params.amm_in;
     cfg.amm.order_out = params.amm_out;
     cfg.amm.thr = params.amm_thr;
-    data_cleaned = ft_denoise_amm(cfg, data);
+    data = ft_denoise_amm(cfg, data);
 else
-    data_cleaned = data;
+    data = data;
 end
 
 % Recombine with ExG channels
-data_cleaned.label = vertcat(data_cleaned.label,ExG.label);
-data_cleaned.hdr = comb.hdr;
-incl = ismember(comb.hdr.label,data_cleaned.label);
-data_cleaned.hdr.label = comb.hdr.label(incl);
-data_cleaned.hdr.chantype = comb.hdr.chantype(incl);
-data_cleaned.hdr.chanunit = comb.hdr.chanunit (incl);
-for i = 1:length(data_cleaned.trial)
-    data_cleaned.trial{i} = vertcat(data_cleaned.trial{i}, ExG.trial{i}); 
+data.label = vertcat(data.label,ExG.label);
+data.hdr = comb.hdr;
+incl = ismember(comb.hdr.label,data.label);
+data.hdr.label = comb.hdr.label(incl);
+data.hdr.chantype = comb.hdr.chantype(incl);
+data.hdr.chanunit = comb.hdr.chanunit (incl);
+for i = 1:length(data.trial)
+    data.trial{i} = vertcat(data.trial{i}, ExG.trial{i}); 
 end
 
 %% Reject jump trials
@@ -210,27 +203,33 @@ cfg.preproc.medianfilter  = 'yes';
 cfg.preproc.medianfiltord  = 9;
 cfg.preproc.absdiff       = 'yes';
 cfg.threshold = params.z_threshold;
-[cfg,badtrl_jump] = ft_badsegment(cfg, data_cleaned);
-data_cleaned = ft_rejectartifact(cfg,data_cleaned);
+[cfg,badtrl_jump] = ft_badsegment(cfg, data);
+data = ft_rejectartifact(cfg,data);
 
 %% Reject noisy trials
 cfg = [];
 cfg.channel = {'*bz'};
 cfg.metric = 'std';
 cfg.threshold = params.opm_std_threshold;
-[cfg,badtrl_std] = ft_badsegment(cfg, data_cleaned);
-data_cleaned = ft_rejectartifact(cfg,data_cleaned);
+[cfg,badtrl_std] = ft_badsegment(cfg, data);
+data = ft_rejectartifact(cfg,data);
+
+%% Downsample
+if isfield(params,'ds_freq') && ~isempty(params.ds_freq) && params.ds_freq~=1000
+    cfg = [];
+    cfg.resamplefs = params.ds_freq;
+    data = ft_resampledata(cfg, data);
+end
 
 %% Remove padding
 cfg = [];
 cfg.latency = [-params.pre params.post];
-data_cleaned = ft_selectdata(cfg, data_cleaned); 
+data = ft_selectdata(cfg, data); 
 
 %% Convert to sensor definitions to cm
-data_cleaned.grad = ft_convert_units(data_cleaned.grad,'cm');
+data.grad = ft_convert_units(data.grad,'cm');
 
-%% Find bad opm channels
-
+%% Save bad trials
 [~,idx]=ismember(opm_cleaned.sampleinfo,badtrl_jump,'rows');
 badtrl_opm_jump = find(idx);
 [~,idx]=ismember(opm_cleaned.sampleinfo,badtrl_std,'rows');
