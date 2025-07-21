@@ -1,5 +1,8 @@
 
-WIP for standardized pre-processing pipline for data collected at NatMEG.
+WIP for standardized pre-processing pipeline for OPM data collected at NatMEG.
+
+# Overview
+This repository contains scripts for pre-processing OPM data collected at NatMEG. The scripts are designed to be modular and can be adapted for different datasets or analysis needs. The main focus is on reading in the data, performing Independent Component Analysis (ICA) for artifact removal, and preparing the data for source reconstruction.
 
 # Scripts
 ### opm_analysis_main.m
@@ -24,6 +27,18 @@ Function to detect bad channels in OPM data. Return `badchs` with:
 ### timelock.m
 Create time-locked epochs for OPM or SQUID data. Baseline/demean data and save butterfly plot.
 
+### prepare_mri.m
+Prepare MRI for source reconstruction.
+
+### fit_hpi.m
+?
+
+### fit_mne.m
+Fit MNE source model for both OPM and SQUID data?
+
+### create_preproc_report.m
+Not in use
+
 ### insidePointcloud.m
 Not in use
 
@@ -32,6 +47,8 @@ Not in use
 - Read parameters from separate config file
 - Separate OPM and SQUID analysis
 - Don't specify params.manual_ica more than once (now in params, function and when calling function?)
+- Save intermediary results and figures
+- Create quarto markdown template for report generation
     
 
 
