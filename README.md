@@ -4,6 +4,17 @@ WIP for standardized pre-processing pipeline for OPM data collected at NatMEG.
 # Overview
 This repository contains scripts for pre-processing OPM data collected at NatMEG. The scripts are designed to be modular and can be adapted for different datasets or analysis needs. The main focus is on reading in the data, performing Independent Component Analysis (ICA) for artifact removal, and preparing the data for source reconstruction.
 
+# To do
+- Read data from BIDS, loop over subjects from CSV/list
+- Read parameters from separate config file
+    - Add option to exclude some subjects/sessions
+- Consider level for paradigm/task in BIDS/derivatives/sub/ses/mod/TASK/ to simplify structuring of data processed with different parameters
+- Separate MRI and HPI preparation pipeline
+- Separate OPM and SQUID analysis
+- Don't specify params.manual_ica more than once (now in params, function and when calling function?)
+- Save intermediary results and figures
+- Create quarto markdown template for report generation
+
 # Scripts
 ### opm_analysis_main.m
 Main script to run analysis. Specify paths to data and parameters (e.g. filter cutoff, pre- and post-stim time window) here.
@@ -40,15 +51,4 @@ Fit MNE source model for both OPM and SQUID data?
 Not in use
 
 ### insidePointcloud.m
-Not in use
-
-# To do
-- Read data from BIDS, loop over subjects from CSV/list
-- Read parameters from separate config file
-- Separate OPM and SQUID analysis
-- Don't specify params.manual_ica more than once (now in params, function and when calling function?)
-- Save intermediary results and figures
-- Create quarto markdown template for report generation
-    
-
-
+Not in use 
