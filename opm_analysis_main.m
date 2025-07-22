@@ -38,7 +38,9 @@ overwrite.preproc = true;
 overwrite.timelock = true;
 overwrite.mri = false;
 overwrite.coreg = false;
-overwrite.sourcerec = false;
+overwrite.dipole = false;
+overwrite.mne = false;
+
 
 %% Params
 params = [];
@@ -102,17 +104,19 @@ ses_cnt = 0;
 
 %% Loop over subjects
 for i_sub = subs_to_run
-    % Loop over sessions
+    params.sub = ['sub-' num2str(i_sub,'%02d')];
+    save_path = fullfile(base_save_path, params.sub);  
+    if ~exist(save_path, 'dir')
+       mkdir(save_path)
+    end
+    %% Loop over sessions
     for i_ses = 1:length(sessions(i_sub,:))
         if isempty(sessions{i_sub,i_ses})
             disp(['No session defined! Skipping sub-' num2str(i_sub,'%02d') '_ses-' num2str(i_ses,'%02d')])
             continue % Skip iteration if no session defined
         end
-    
         ses_cnt = ses_cnt + 1;
 
-        %% Loop over subjects
-        params.sub = ['sub-' num2str(i_sub,'%02d')];
         params.ses = ['ses-' num2str(i_ses,'%02d')];
         
         %% Paths
@@ -136,16 +140,15 @@ for i_sub = subs_to_run
             aux_files{i_paradigm} = fullfile(raw_path,'meg',[paradigms{i_paradigm} 'EEG.fif']); % corresponding aux files containing EOG/ECG
         end
         hpi_path = fullfile(raw_path,'osmeg');
-        mri_path = '/Volumes/dataarchvie/23106_opmbci/NatMEG_0953/mri/';
-        mri_file = fullfile(mri_path,'mri','orig','001.mgz');
         
+        %% Loop over paradigms/tasks
         for i_paradigm = 1:length(paradigms)
             params.paradigm = paradigms{i_paradigm};
             
             %% Read and preproc
             params.modality = 'opm';
             params.layout = 'fieldlinebeta2bz_helmet.mat';
-            params.chs = '*bz';
+            params.chs = '*_b*';
             
             if overwrite.preproc == true || ~exist(fullfile(save_path, [params.paradigm '_data_ica.mat']),'file')
                 ft_hastoolbox('mne', 1);
@@ -219,71 +222,23 @@ for i_sub = subs_to_run
             end
         end
         
-        %% MRI
-        ft_hastoolbox('mne',1);
-        if overwrite.mri==true
-            ft_hastoolbox('mne', 1);
-            prepare_mri(mri_file,aux_files(1),save_path)
-    
-            % Read and transform cortical restrained source model
-            files = dir(fullfile(mri_path,'workbench'));
-            for i = 1:length(files)
-                if endsWith(files(i).name,['.L.midthickness.' params.src_density 'k_fs_LR.surf.gii'])
-                    filename = fullfile(mri_path,'workbench',files(i).name);
-                end
-                if endsWith(files(i).name,['.L.aparc.' params.src_density 'k_fs_LR.label.gii'])
-                    filename2 = fullfile(mri_path,'workbench',files(i).name);
-                end
-            end
-            clear sourcemodel mri_resliced
-            mri_resliced = load(fullfile(save_path, 'mri_resliced.mat')).mri_resliced;
-            sourcemodel = ft_read_headshape({filename, strrep(filename, '.L.', '.R.')});
-            
-            aparc_L = ft_read_atlas({filename2,filename});
-            aparc_R = ft_read_atlas({strrep(filename2,'.L.','.R.'),strrep(filename,'.L.','.R.')});
-            tmp = ft_read_atlas(strrep(filename2, '.L.', '.R.'),'format','caret_label');
-            n_labels = length(aparc_L.parcellationlabel);
-            atlas = [];
-            atlas.parcellationlabel = [aparc_L.parcellationlabel; aparc_R.parcellationlabel];
-            atlas.parcellation = [aparc_L.parcellation; aparc_R.parcellation + n_labels];
-            atlas.rgba = [aparc_L.rgba; aparc_R.rgba; [0 0 0 1]];
-            n_labels = length(atlas.parcellationlabel);
-            atlas.parcellation(isnan(atlas.parcellation))=n_labels+1;
-            sourcemodel.brainstructure = atlas.parcellation;
-            sourcemodel.brainstructurelabel = atlas.parcellationlabel;
-            sourcemodel.brainstructurecolor = atlas.rgba;
-        
-            T = mri_resliced.transform/mri_resliced.hdr.vox2ras;
-            sourcemodel = ft_transform_geometry(T, sourcemodel);
-            sourcemodel.inside = true(size(sourcemodel.pos,1),1);
-            save(fullfile(save_path, [params.sub '_sourcemodel']), 'sourcemodel', '-v7.3');
-    
-            clear mri_resliced sourcemodel T atlas tmp aparc_L aparc_R filename filename2
-        end
-        
         %% HPI localization
         ft_hastoolbox('mne',1);
         
-        if overwrite.coreg==true 
+        if exist(fullfile(save_path_mri, 'opm_trans.mat'),'file') && overwrite.coreg==false
+            disp(['Not overwriting OPM transform for ' params.sub]);
+        else
             ft_hastoolbox('mne', 1);
             params.include_chs = load(fullfile(save_path, ['include_chs' num2str(length(opm_files))])).include_chs;
             clear data_ica
             opm_trans = fit_hpi(hpi_path, aux_files{1}, save_path, params);
         
-            for i_file = 1:length(opm_files)
-                clear timelocked
-                data_ica = load(fullfile(save_path, [params.sub '_' params.modality '_auditory' num2str(i_file) '.mat'])).data_ica;
-                data_ica.grad.chanpos = opm_trans.transformPointsForward(data_ica.grad.chanpos);
-                data_ica.grad.coilpos = opm_trans.transformPointsForward(data_ica.grad.coilpos);
-                data_ica.grad.chanori = (opm_trans.Rotation'*data_ica.grad.chanori')';
-                data_ica.grad.coilori = (opm_trans.Rotation'*data_ica.grad.coilori')';
-                save(fullfile(save_path, [params.sub '_' params.modality '_auditoryT' num2str(i_file)]),'data_ica',"-v7.3");
-                cfg = [];
-                cfg.covariance = 'yes';
-                cfg.covariancewindow = [-params.pre 0];
-                timelocked = ft_timelockanalysis(cfg,data_ica);
-                save(fullfile(save_path, [params.sub '_' params.modality '_auditory_timelockedT' num2str(i_file)]),'timelocked',"-v7.3");
-                clear data_ica timelocked
+            opm_timelockedT = load(fullfile(save_path, [params.sub '_opm_timelocked.mat'])).timelocked;
+            for i = 1:length(params.trigger_labels)
+                opm_timelockedT{i}.grad.chanpos = opm_trans.transformPointsForward(opm_timelockedT{i}.grad.chanpos);
+                opm_timelockedT{i}.grad.coilpos = opm_trans.transformPointsForward(opm_timelockedT{i}.grad.coilpos);
+                opm_timelockedT{i}.grad.chanori = (opm_trans.Rotation'*opm_timelockedT{i}.grad.chanori')';
+                opm_timelockedT{i}.grad.coilori = (opm_trans.Rotation'*opm_timelockedT{i}.grad.coilori')';
             end
     
             % Plot source and head models
@@ -295,19 +250,42 @@ for i_sub = subs_to_run
             ft_plot_mesh(sourcemodel, 'maskstyle', 'opacity', 'facecolor', 'black', 'facealpha', 0.25, 'edgecolor', 'red',   'edgeopacity', 0.5,'unit','cm');
             hold on; 
             ft_plot_headmodel(headmodels.headmodel_meg, 'facealpha', 0.25, 'edgealpha', 0.25)
-            ft_plot_sens(timelocked.grad,'unit','cm')
+            ft_plot_sens(opm_timelockedT.grad,'unit','cm')
             hold off;
             title('OPM-MEG')
             view([-140 10])
             saveas(h, fullfile(save_path, 'figs', 'opm_layout.jpg'))
             close all
-        
+            
+            save(fullfile(save_path, [params.sub '_opm_timelockedT']), 'opm_timelockedT', '-v7.3');
             clear timelocked sourcemodel headmodels opm_trans
+        end
+
+        %% Dipole fits
+        ft_hastoolbox('mne',1);  
+        if exist(fullfile(save_path, [params.peaks{1}.label '_dipoles.mat']),'file') && overwrite.dip==false
+            disp(['Not overwriting dipole source reconstruction for ' params.sub]);
+        elseif exist(fullfile(save_path, [params.sub '_opm_timelockedT.mat']),'file')
+            headmodel = load(fullfile(save_path_mri, 'headmodels.mat')).headmodels.headmodel_meg;
+            mri_resliced = load(fullfile(save_path_mri, 'mri_resliced.mat')).mri_resliced;
+            opm_timelockedT = load(fullfile(save_path, [params.sub '_opm_timelockedT.mat'])).opm_timelockedT;
+            squid_timelocked = load(fullfile(save_path, [params.sub '_squid_timelocked.mat'])).timelocked;
+            
+            for i_peak = 1:length(params.peaks)
+                peak_opm = load(fullfile(save_path, [params.sub '_opm_' params.peaks{i_peak}.label])).peak; 
+                fit_dipoles(save_path, opm_timelockedT, headmodel, mri_resliced, params);
+                peak_squid = load(fullfile(save_path, [params.sub '_squid_' params.peaks{i_peak}.label])).peak; 
+                fit_dipoles(save_path, squid_timelocked, headmodel, mri_resliced, params);
+                clear peak_opm peak_squid
+            end
+            clear squid_timelocked opm_timelockedT
         end
         
         %% MNE
         ft_hastoolbox('mne',1);
-        if overwrite.sourcerec==true
+        if exist(fullfile(save_path, 'opm_mne_peaks.mat'),'file') && overwrite.mne==false
+            disp(['Not overwriting MNE source reconstruction for ' params.sub]);
+        elseif exist(fullfile(save_path, [params.sub '_opm_timelockedT.mat']),'file') 
             clear headmodel sourcemodel sourcemodel_inflated
             sourcemodel = load(fullfile(save_path, [params.sub '_sourcemodel'])).sourcemodel;
             sourcemodel_inflated = load(fullfile(save_path, [params.sub '_sourcemodel_inflated'])).sourcemodel_inflated;
