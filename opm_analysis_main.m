@@ -29,26 +29,26 @@ squid = false;
 subsessions = readtable(fullfile(pwd, '../completed_meg_sessions_long_DATA_2025-07-23.csv'), 'Delimiter',',');
 
 %% Loop over subjects
-for i_sub = unique(subsessions.new_subject_id)'
+for i_sub = 1:length(unique(subsessions.new_subject_id))
     % zeropad to three zeros
-    params.sub = ['sub-' num2str(i_sub,'%03d')];
+    params.sub = ['sub-' num2str(subsessions.new_subject_id(i_sub),'%03d')];
     disp(params.sub)
     save_path = fullfile(paths.base_save_path, params.sub);  
     if ~exist(save_path, 'dir')
        mkdir(save_path)
     end
-    %% Loop over sessions
-    for i_ses = 1:length(sessions(i_sub,:))
-        if isempty(sessions{i_sub,i_ses})
-            disp(['No session defined! Skipping sub-' num2str(i_sub,'%02d') '_ses-' num2str(i_ses,'%02d')])
-            continue % Skip iteration if no session defined
-        end
-        ses_cnt = ses_cnt + 1;
 
-        params.ses = ['ses-' num2str(i_ses,'%02d')];
-        
+    % find sessions for subject
+    sessions = subsessions(subsessions.new_subject_id==subsessions.new_subject_id(i_sub),:).new_session_id;
+    
+    %% Loop over sessions
+    for i_ses = 1:length(sessions)
+        % create zeropadded sessions
+        params.ses = ['ses-' num2str(sessions(i_ses),'%02d')];
+        fprintf('working on %s %s',params.sub,params.ses);
+
         %% Paths
-        raw_path = fullfile(base_data_path, ['NatMEG_' subjects{i_sub}], sessions{i_sub,i_ses});
+        raw_path = fullfile(paths.base_data_path, params.sub, params.ses);
         save_path = fullfile(paths.base_save_path, params.sub, params.ses);
         if ~exist(save_path, 'dir')
            mkdir(save_path)
@@ -57,24 +57,20 @@ for i_sub = unique(subsessions.new_subject_id)'
            mkdir(fullfile(save_path,'figs'))
         end
         for i_paradigm = 1:length(paradigm.paradigms)
-            if server % on server
-                tmp = dir(fullfile(raw_path,'opm',['*' paradigm.paradigms{i_paradigm} 'OPM_raw.fif']));
-                opm_files{i_paradigm} = fullfile(tmp.folder,tmp.name); % opm files 
-                squid_files{i_paradigm} = fullfile(raw_path,'meg',[paradigm.paradigms{i_paradigm} 'MEG_tsss_mc.fif']); % corresponding aux files containing EOG/ECG
-            else % on laptop
-                opm_files{i_paradigm} = fullfile(raw_path,'osmeg',[paradigm.paradigms{i_paradigm} 'OPM_raw.fif']); % opm files 
-                squid_files{i_paradigm} = fullfile(raw_path,'meg',[paradigm.paradigms{i_paradigm} 'MEG_proc-tsss+corr98+mc+avgHead_meg.fif']); % corresponding aux files containing EOG/ECG
-            end
+            
+            tmp = dir(fullfile(raw_path,'opm',['*' paradigm.paradigms{i_paradigm} 'OPM_raw.fif']));
+            opm_files{i_paradigm} = fullfile(tmp.folder,tmp.name); % opm files 
             aux_files{i_paradigm} = fullfile(raw_path,'meg',[paradigm.paradigms{i_paradigm} 'EEG.fif']); % corresponding aux files containing EOG/ECG
         end
         hpi_path = fullfile(raw_path,'osmeg');
-        
+        break
         %% Loop over paradigm.paradigms/tasks
         for i_paradigm = 1:length(paradigm.paradigms)
             params.paradigm = paradigm.paradigms{i_paradigm};
             params.trigger_codes = paradigm.trigger_codes; 
             params.trigger_labels = paradigm.trigger_labels; 
             
+            disp(['Processing paradigm: ' params.paradigm])
             %% Read and preproc
             params.modality = 'opm';
             params.layout = 'fieldlinebeta2bz_helmet.mat';
