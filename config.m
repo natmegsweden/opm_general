@@ -77,7 +77,7 @@ function params = get_params()
 end
 
 function paradigm = get_paradigm()
-    paradigms = {'varITI'}; % Paradigms to analyze for all participants and sessions
+    paradigm.paradigms = {'varITI'}; % Paradigms to analyze for all participants and sessions
     paradigm.trigger_codes = [3 5 9]; % Trigger values to timelock
     paradigm.trigger_labels = {'short', 'middle', 'long'}; % Labels corresponding to the trigger values    
 end
@@ -85,7 +85,7 @@ end
 function paths = get_paths()
     paths = [];
     paths.base_data_path = '~/../../data/projects/capsi/bids';
-    paths.base_save_path = '~/../../data/projects/capsi';
+    paths.base_save_path = '~/temp_output';
     paths.base_matlab_path = '/usr/local/MATLAB/R2024b';
     paths.project_scripts_path = '~/opm_general';
 end

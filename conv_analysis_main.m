@@ -1,39 +1,54 @@
-%% This main script runs the preprecessing of OPM data
-% TO DO:
-% - Figure out where completed_meg_sessions_long_DATA are stored
-% - Figure out outputpath (now saved to ~/temp_output)
-
 %% Reset all
 clear all
 close all
 restoredefaultpath
 
-% make sure that pwd is opm_general in the users home folder
 disp(pwd)
-addpath(pwd)
 
-%% Get params from config
-overwrite = config('overwrite');
-params = config('params');
-paradigm = config('paradigm');
-paths = config('paths');
+%% Base paths
+if contains(pwd,'/home/chrpfe')
+    server = true;
+    % Server:
+    base_data_path = '/archive/23108_CAPSI/MEG/';
+    base_save_path = '/home/share/capsi_share';
+    base_matlab_path = '/home/chrpfe/Documents/MATLAB/';
+    project_scripts_path = '/home/chrpfe/Documents/MATLAB/opm_general';
+else
+    server = false;
+    % Laptop:
+    base_data_path = '/Volumes/dataarchvie/CHOP/MEG';
+    base_save_path = '/Users/christophpfeiffer/data_local/CHOP';
+    base_matlab_path = '/Users/christophpfeiffer/Dropbox/Mac/Documents/MATLAB';
+    project_scripts_path = '/Users/christophpfeiffer/opm_general';
+end
 
-%% Set up fieldtrip (now assumed to be in users home folder)
-addpath(fullfile(pwd,'../fieldtrip')) % Fieldtrip path
+%% Set up fieldtrip
+addpath(fullfile(base_matlab_path,'fieldtrip')) % Fieldtrip path
+addpath(fullfile(base_matlab_path,'fieldtrip_private')) % Fieldtrip private functions
+addpath(project_scripts_path)
 ft_defaults
+
+global ft_default
+ft_default.showcallinfo = 'no';
 
 %% Analyse squid data?
 squid = false;
 
 %% Subjects + dates
-subsessions = readtable(fullfile(pwd, '../completed_meg_sessions_long_DATA_2025-07-23.csv'), 'Delimiter',',');
+[subjects, sessions] = getSubjectsAndSessions(base_data_path,false);
+
+if server
+    subs_to_run = [find(cellfun(@(x) strcmp(x,'1196'), subjects)) find(cellfun(@(x) strcmp(x,'1206'), subjects)) find(cellfun(@(x) strcmp(x,'1211'), subjects))];
+else
+    %subs_to_run = find(cellfun(@str2num, subjects)>1082)';
+    subs_to_run = find(cellfun(@(x) strcmp(x,'0953'), subjects));
+end
+ses_cnt = 0;
 
 %% Loop over subjects
-for i_sub = unique(subsessions.new_subject_id)'
-    % zeropad to three zeros
-    params.sub = ['sub-' num2str(i_sub,'%03d')];
-    disp(params.sub)
-    save_path = fullfile(paths.base_save_path, params.sub);  
+for i_sub = subs_to_run
+    params.sub = ['sub-' num2str(i_sub,'%02d')];
+    save_path = fullfile(base_save_path, params.sub);  
     if ~exist(save_path, 'dir')
        mkdir(save_path)
     end
@@ -49,29 +64,29 @@ for i_sub = unique(subsessions.new_subject_id)'
         
         %% Paths
         raw_path = fullfile(base_data_path, ['NatMEG_' subjects{i_sub}], sessions{i_sub,i_ses});
-        save_path = fullfile(paths.base_save_path, params.sub, params.ses);
+        save_path = fullfile(base_save_path, params.sub, params.ses);
         if ~exist(save_path, 'dir')
            mkdir(save_path)
         end
         if ~exist(fullfile(save_path,'figs'), 'dir')
            mkdir(fullfile(save_path,'figs'))
         end
-        for i_paradigm = 1:length(paradigm.paradigms)
+        for i_paradigm = 1:length(paradigms)
             if server % on server
-                tmp = dir(fullfile(raw_path,'opm',['*' paradigm.paradigms{i_paradigm} 'OPM_raw.fif']));
+                tmp = dir(fullfile(raw_path,'opm',['*' paradigms{i_paradigm} 'OPM_raw.fif']));
                 opm_files{i_paradigm} = fullfile(tmp.folder,tmp.name); % opm files 
-                squid_files{i_paradigm} = fullfile(raw_path,'meg',[paradigm.paradigms{i_paradigm} 'MEG_tsss_mc.fif']); % corresponding aux files containing EOG/ECG
+                squid_files{i_paradigm} = fullfile(raw_path,'meg',[paradigms{i_paradigm} 'MEG_tsss_mc.fif']); % corresponding aux files containing EOG/ECG
             else % on laptop
-                opm_files{i_paradigm} = fullfile(raw_path,'osmeg',[paradigm.paradigms{i_paradigm} 'OPM_raw.fif']); % opm files 
-                squid_files{i_paradigm} = fullfile(raw_path,'meg',[paradigm.paradigms{i_paradigm} 'MEG_proc-tsss+corr98+mc+avgHead_meg.fif']); % corresponding aux files containing EOG/ECG
+                opm_files{i_paradigm} = fullfile(raw_path,'osmeg',[paradigms{i_paradigm} 'OPM_raw.fif']); % opm files 
+                squid_files{i_paradigm} = fullfile(raw_path,'meg',[paradigms{i_paradigm} 'MEG_proc-tsss+corr98+mc+avgHead_meg.fif']); % corresponding aux files containing EOG/ECG
             end
-            aux_files{i_paradigm} = fullfile(raw_path,'meg',[paradigm.paradigms{i_paradigm} 'EEG.fif']); % corresponding aux files containing EOG/ECG
+            aux_files{i_paradigm} = fullfile(raw_path,'meg',[paradigms{i_paradigm} 'EEG.fif']); % corresponding aux files containing EOG/ECG
         end
         hpi_path = fullfile(raw_path,'osmeg');
         
-        %% Loop over paradigm.paradigms/tasks
-        for i_paradigm = 1:length(paradigm.paradigms)
-            params.paradigm = paradigm.paradigms{i_paradigm};
+        %% Loop over paradigms/tasks
+        for i_paradigm = 1:length(paradigms)
+            params.paradigm = paradigms{i_paradigm};
             params.trigger_codes = paradigm.trigger_codes; 
             params.trigger_labels = paradigm.trigger_labels; 
             
@@ -84,7 +99,7 @@ for i_sub = unique(subsessions.new_subject_id)'
                 ft_hastoolbox('mne', 1);
     
                 % Read data 
-                disp(['Reading file: ' num2str(i_paradigm) '/' num2str(length(paradigm.paradigms)) '...'])
+                disp(['Reading file: ' num2str(i_paradigm) '/' num2str(length(paradigms)) '...'])
                 data_epo = read_osMEG(opm_files{i_paradigm}, aux_files{i_paradigm}, save_path, params); % Read data
                 
                 % ICA
@@ -122,7 +137,7 @@ for i_sub = unique(subsessions.new_subject_id)'
                     ft_hastoolbox('mne', 1);
         
                     % Read data 
-                    disp(['Reading file: ' num2str(i_paradigm) '/' num2str(length(paradigm.paradigms)) '...'])
+                    disp(['Reading file: ' num2str(i_paradigm) '/' num2str(length(paradigms)) '...'])
                     data_epo = read_cvMEG(squid_files{i_paradigm}, params); % Read data
                     
                     % ICA
@@ -257,7 +272,7 @@ for i_sub = unique(subsessions.new_subject_id)'
     end
 end
 
-save(fullfile(paths.base_save_path, 'group_results.mat'), 'grp_tag_opm','grp_tag_squid','grp_SNR_opm','grp_SNR_squid','grp_pp_opm','grp_pp_squid');
+save(fullfile(base_save_path, 'group_results.mat'), 'grp_tag_opm','grp_tag_squid','grp_SNR_opm','grp_SNR_squid','grp_pp_opm','grp_pp_squid');
 
 %% clear and close all, then exit to free memory
 close all
