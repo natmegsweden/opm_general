@@ -68,3 +68,11 @@ function paradigm = get_paradigm()
     paradigm.trigger_codes = [3 5 9]; % Trigger values to timelock
     paradigm.trigger_labels = {'short', 'middle', 'long'}; % Labels corresponding to the trigger values    
 end
+
+function paths = get_paths()
+    paths = [];
+    paths.base_data_path = '~/../../data/projects/capsi/bids';
+    paths.base_save_path = '~/../../data/projects/capsi';
+    paths.base_matlab_path = '/usr/local/bin/matlab/';
+    paths.project_scripts_path = '~/opm_general';
+end
