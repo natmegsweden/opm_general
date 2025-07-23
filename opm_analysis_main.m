@@ -3,6 +3,8 @@ clear all
 close all
 restoredefaultpath
 
+disp(pwd)
+
 %% Base paths
 if contains(pwd,'/home/chrpfe')
     server = true;
