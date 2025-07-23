@@ -1,4 +1,17 @@
 %% This config file contains functions to be called by the main.m scripts.
+function out = config(what)
+    switch what
+        case 'params'
+            out = get_params();
+        case 'overwrite'
+            out = get_overwrite();
+        case 'paradigm'
+            out = get_paradigm();
+        case 'paths'
+            out = get_paths();
+    end
+end
+
 
 %% Overwrite specific steps in the analysis 
 function overwrite = get_overwrite()
@@ -73,6 +86,6 @@ function paths = get_paths()
     paths = [];
     paths.base_data_path = '~/../../data/projects/capsi/bids';
     paths.base_save_path = '~/../../data/projects/capsi';
-    paths.base_matlab_path = '/usr/local/bin/matlab/';
+    paths.base_matlab_path = '/usr/local/MATLAB/R2024b';
     paths.project_scripts_path = '~/opm_general';
 end
