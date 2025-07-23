@@ -8,6 +8,7 @@ This repository contains scripts for pre-processing OPM data collected at NatMEG
 - Read data from BIDS, loop over subjects from CSV/list
 - Read parameters from separate config file
     - Add option to exclude some subjects/sessions
+- Recommend SSP, make sure channels are identical between actual and empty room recording.
 - Consider level for paradigm/task in BIDS/derivatives/sub/ses/mod/TASK/ to simplify structuring of data processed with different parameters
 - Separate MRI and HPI preparation pipeline
 - Separate OPM and SQUID analysis
