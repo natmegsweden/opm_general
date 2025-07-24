@@ -10,6 +10,7 @@ This repository contains scripts for pre-processing OPM data collected at NatMEG
     - Add option to exclude some subjects/sessions
 - Recommend SSP, make sure channels are identical between actual and empty room recording.
 - Consider level for paradigm/task in BIDS/derivatives/sub/ses/mod/TASK/ to simplify structuring of data processed with different parameters
+- Parallelize processing
 - Separate MRI and HPI preparation pipeline
 - Separate OPM and SQUID analysis
 - Don't specify params.manual_ica more than once (now in params, function and when calling function?)
