@@ -9,6 +9,8 @@ function out = config(what)
             out = get_paradigm();
         case 'paths'
             out = get_paths();
+        case 'skip'
+            out = get_skip();
     end
 end
 
@@ -84,8 +86,15 @@ end
 
 function paths = get_paths()
     paths = [];
-    paths.base_data_path = '~/../../data/projects/capsi/bids';
+    paths.base_data_path = '~/../../projects/capsi/bids';
     paths.base_save_path = '~/temp_output';
     paths.base_matlab_path = '/usr/local/MATLAB/R2024b';
     paths.project_scripts_path = '~/opm_general';
+end
+
+function skip = get_skip()
+    skip = [];
+    skip.subjects = {'sub-001', 'sub-002', 'sub-003'}; % Subjects to skip entirely (make sure they are zero padded to the amount of digitis in your bids foder)
+    skip.sessions = {}; % Sessions to skip entirely
+    skip.subsessions = {'sub-001_ses-01', 'sub-002_ses-02'}; % Subjects-session combinations to skip 
 end
