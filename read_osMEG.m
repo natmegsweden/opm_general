@@ -9,8 +9,21 @@ function [data] = read_osMEG(opm_file, aux_file, save_path, params)
 % params: containing pre, post (pre- and poststim), and ds_freq 
 % (downsampling frequency).
 
-if ~exist(opm_file,'file')
-    error(['Did not find OPM file: ' opm_file])
+% since OPM data is sometimes split into multiple files, this function
+% can handle opm_file being a cell array of file paths or a single file path. 
+
+num_files = numel(opm_file);
+
+if num_files > 1
+    for i = 1:num_files
+        if ~exist(opm_file{i},'file')
+            error(['Did not find OPM file: ' opm_file{i}])
+        end
+    end
+else
+    if ~exist(opm_file,'file')
+        error(['Did not find OPM file: ' opm_file])
+    end
 end
 
 if isempty(aux_file)
@@ -18,7 +31,7 @@ if isempty(aux_file)
 else
     opm_only = false;
     if ~exist(aux_file,'file')
-        error(['Did not find AUX file: ' aux_file])
+         error(['Did not find AUX file: ' aux_file])
     end
 end
 
@@ -26,7 +39,7 @@ end
 % OPM
 trl_opm=[];
 cfg = [];
-cfg.datafile        = opm_file;
+cfg.dataset        = opm_file;
 cfg.coordsys        = 'dewar';
 cfg.coilaccuracy    = 0;
 opm_raw = ft_preprocessing(cfg);
@@ -39,6 +52,8 @@ trl_opm(:,3) = -(params.pre+params.pad)*opm_raw.fsample;
 trl_opm(:,4) = opm_raw.trial{1}(i_trig_opm,trig);
 trl_opm(:,1:2) = trl_opm(:,1:2) + floor(params.delay*opm_raw.fsample); % adjust for stim delay
 trl_opm = round(trl_opm);
+
+disp(trl_opm)
 
 if ~opm_only
     % AUX

@@ -14,9 +14,10 @@ addpath(pwd)
 
 %% Get params from config
 overwrite = config('overwrite');
-params = config('params');
+params = config('params', 'opm');
 paradigm = config('paradigm');
 paths = config('paths');
+skip = config('skip');
 
 %% Set up fieldtrip (now assumed to be in users home folder)
 addpath(fullfile(pwd,'../fieldtrip')) % Fieldtrip path
@@ -27,12 +28,21 @@ squid = false;
 
 %% Subjects + dates
 subsessions = readtable(fullfile(pwd, '../completed_meg_sessions_long_DATA_2025-07-23.csv'), 'Delimiter',',');
+subject_list = unique(subsessions.new_subject_id);
 
 %% Loop over subjects
-for i_sub = 1:length(unique(subsessions.new_subject_id))
+for i_sub = 1:length(subject_list)
     % zeropad to three zeros
-    params.sub = ['sub-' num2str(subsessions.new_subject_id(i_sub),'%03d')];
+    params.sub = ['sub-' num2str(subject_list(i_sub),'%03d')];
     disp(params.sub)
+
+    % check if subject is in skip list
+    if ismember(params.sub, skip.subjects)
+        disp(['Skipping subject: ' params.sub])
+        continue
+    end
+    
+    % create save path
     save_path = fullfile(paths.base_save_path, params.sub);  
     if ~exist(save_path, 'dir')
        mkdir(save_path)
@@ -45,7 +55,14 @@ for i_sub = 1:length(unique(subsessions.new_subject_id))
     for i_ses = 1:length(sessions)
         % create zeropadded sessions
         params.ses = ['ses-' num2str(sessions(i_ses),'%02d')];
-        fprintf('working on %s %s',params.sub,params.ses);
+
+        % skip if session in skip.sessions or combination of subject and session in skip.subsessions
+        if ismember(params.ses, skip.sessions) || ismember([params.sub '_' params.ses], skip.subsessions)
+            disp(['Skipping session: ' params.ses ' for subject: ' params.sub])
+            continue
+        end
+
+        fprintf('working on %s %s \n',params.sub,params.ses);
 
         %% Paths
         raw_path = fullfile(paths.base_data_path, params.sub, params.ses);
@@ -57,13 +74,32 @@ for i_sub = 1:length(unique(subsessions.new_subject_id))
            mkdir(fullfile(save_path,'figs'))
         end
         for i_paradigm = 1:length(paradigm.paradigms)
-            
-            tmp = dir(fullfile(raw_path,'opm',['*' paradigm.paradigms{i_paradigm} 'OPM_raw.fif']));
-            opm_files{i_paradigm} = fullfile(tmp.folder,tmp.name); % opm files 
-            aux_files{i_paradigm} = fullfile(raw_path,'meg',[paradigm.paradigms{i_paradigm} 'EEG.fif']); % corresponding aux files containing EOG/ECG
+            opm_files = [];
+            % search for AudOdd data, might be split
+            tmp = dir(fullfile(raw_path, 'meg',['*' paradigm.paradigms{i_paradigm} '_acq-hedscan' '*' '_meg.fif']));
+            if isempty(tmp)
+                disp(['No OPM data found for paradigm: ' paradigm.paradigms{i_paradigm} ' in ' fullfile(raw_path, 'meg')])
+                continue
+            else
+                %disp(tmp)
+                % handle split files
+                 if numel(tmp) > 1
+                    % Return a cell array of full paths
+                    opm_files{i_paradigm} = arrayfun(@(f) fullfile(f.folder, f.name), tmp, 'UniformOutput', false);
+                else
+                    % Return a single path
+                    opm_files{i_paradigm} = fullfile(tmp.folder, tmp.name);
+                end
+                disp(opm_files{i_paradigm})
+                tmp_eeg = dir(fullfile(raw_path,'eeg',['*' paradigm.paradigms{i_paradigm} '_acq-triux' '*' '_eeg.eeg']));
+                aux_files{i_paradigm} = fullfile(tmp_eeg.folder, tmp_eeg.name); % corresponding aux files containing EOG/ECG
+            end
+        end
+        if isempty(opm_files)
+            disp(['No OPM data found for subject: ' params.sub ' in session: ' params.ses])
+            continue
         end
         hpi_path = fullfile(raw_path,'osmeg');
-        break
         %% Loop over paradigm.paradigms/tasks
         for i_paradigm = 1:length(paradigm.paradigms)
             params.paradigm = paradigm.paradigms{i_paradigm};
@@ -72,10 +108,6 @@ for i_sub = 1:length(unique(subsessions.new_subject_id))
             
             disp(['Processing paradigm: ' params.paradigm])
             %% Read and preproc
-            params.modality = 'opm';
-            params.layout = 'fieldlinebeta2bz_helmet.mat';
-            params.chs = '*_b*';
-            
             if overwrite.preproc == true || ~exist(fullfile(save_path, [params.paradigm '_data_ica.mat']),'file')
                 ft_hastoolbox('mne', 1);
     
