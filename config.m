@@ -1,8 +1,14 @@
 %% This config file contains functions to be called by the main.m scripts.
-function out = config(what)
+function out = config(what, varargin)
+    % Parse optional input (e.g. modality = 'opm', 'meg', or 'eeg')
     switch what
         case 'params'
-            out = get_params();
+            if ~isempty(varargin)
+                modality = varargin{1};
+            else
+                modality = 'meg';  % default modality
+            end
+            out = get_params(modality);
         case 'overwrite'
             out = get_overwrite();
         case 'paradigm'
@@ -27,7 +33,7 @@ function overwrite = get_overwrite()
 end
 
 %% Params 
-function params = get_params()
+function params = get_params(modality)
     params = [];
     % Trial lenght
     params.pre = 0.3; % Trial prestim in seconds
@@ -73,15 +79,22 @@ function params = get_params()
     params.source_fixedori = true; % use fixed orientation sources (along vertex normals); if false: use three orthogonal sources per location
     params.use_cov = 'resting_state'; % noise cov to use; default= ' ' for prestim, alt: 'resting_state', 'empty_room'
 
-    params.modality = 'opm';
-    params.layout = 'fieldlinebeta2bz_helmet.mat';
-    params.chs = '*bz';
+    switch modality
+        case 'opm'
+            params.modality = 'opm';
+            params.layout = 'fieldlinebeta2bz_helmet.mat'; % Layout for OPM data
+            params.chs = '*_b*'; % Channel pattern for OPM data
+        case 'meg'
+            params.modality = 'squid';
+            params.layout = 'neuromag306mag.lay';
+            params.chs = 'meg';
+    end
 end
 
 function paradigm = get_paradigm()
-    paradigm.paradigms = {'varITI'}; % Paradigms to analyze for all participants and sessions
-    paradigm.trigger_codes = [3 5 9]; % Trigger values to timelock
-    paradigm.trigger_labels = {'short', 'middle', 'long'}; % Labels corresponding to the trigger values    
+    paradigm.paradigms = {'AudOdd'}; % Paradigms to analyze for all participants and sessions
+    paradigm.trigger_codes = [3 5 11 13]; % Trigger values to timelock
+    paradigm.trigger_labels = {'low_nogo', 'low_go', 'high_nogo', 'high_go'}; % Labels corresponding to the trigger values    
 end
 
 function paths = get_paths()
