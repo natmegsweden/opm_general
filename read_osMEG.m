@@ -43,7 +43,34 @@ cfg.dataset        = opm_file;
 cfg.coordsys        = 'dewar';
 cfg.coilaccuracy    = 0;
 opm_raw = ft_preprocessing(cfg);
-i_trig_opm = find(contains(opm_raw.label,'di'));
+
+% original code does not find trigger channel (channel names seem to be alphabetically sorted and don't correspond)
+% to the channels in the raw data. 
+%i_trig_opm = find(contains(opm_raw.label,'di'));
+
+% hacky solution for now:
+for i = 1:length(opm_raw.label)
+    % check for channel that is 0 over first 10 samples but not the first 20000 samples to avoid picking HPI channels 
+    if sum(opm_raw.trial{1}(i,1:10)) == 0 & sum(opm_raw.trial{1}(i,1:200000))
+        disp(i)
+        % set trigger opm to value
+        i_trig_opm = i
+        % Create plot
+        fig = figure('Visible', 'off');  % Don’t show plot (faster)
+        plot(opm_raw.trial{1}(i,:));
+        title(sprintf('Sensor %d', i));
+
+        % Create filename with padded index (e.g., plot_001.png)
+        filename = sprintf('plot_%03d.png', i);
+
+        % Save the figure
+        saveas(fig, filename);
+
+        % Close the figure to save memory
+        close(fig);
+    end
+end
+
 trig = opm_raw.trial{1}(i_trig_opm,:)>0.5;
 trig = [false trig(2:end)&~trig(1:end-1)];
 trl_opm(:,1) = find(trig)-(params.pre+params.pad)*opm_raw.fsample;
@@ -53,7 +80,10 @@ trl_opm(:,4) = opm_raw.trial{1}(i_trig_opm,trig);
 trl_opm(:,1:2) = trl_opm(:,1:2) + floor(params.delay*opm_raw.fsample); % adjust for stim delay
 trl_opm = round(trl_opm);
 
+disp(['-----------i_trig_opm-----------'])
+disp(i_trig_opm)
 disp(trl_opm)
+disp(['----------------------'])
 
 if ~opm_only
     % AUX
@@ -67,7 +97,7 @@ if ~opm_only
     trl_aux(:,1) = find(trig)-(params.pre+params.pad)*aux_raw.fsample;
     trl_aux(:,2) = find(trig)+(params.post+params.pad)*aux_raw.fsample;
     trl_aux(:,3) = -(params.pre+params.pad)*aux_raw.fsample;
-    trl_aux(:,4) = aux_raw.trial{1}(i_trig_aux,trig);
+    trl_aux(:,4) = aux_raw.trial{1}(i_trig_aux,trig)/1000000; % trigger values are 1x10^6 instead of 1 so add adjustment here
     trl_aux(:,1:2) = trl_aux(:,1:2) + floor(params.delay*aux_raw.fsample); % adjust for stim delay
     trl_aux = round(trl_aux);
     
@@ -254,3 +284,23 @@ save(fullfile(save_path, [params.sub '_opm_badtrls']), ...
     'badtrl_opm_std',"-v7.3"); 
 
 end
+
+% for i = 1:138  
+%     if sum(opm_raw.trial{1}(i,1:10)) == 0 & sum(opm_raw.trial{1}(i,1:200000))
+%         disp(i)
+
+%         % Create plot
+%         fig = figure('Visible', 'off');  % Don’t show plot (faster)
+%         plot(opm_raw.trial{1}(i,:));
+%         title(sprintf('Sensor %d', i));
+
+%         % Create filename with padded index (e.g., plot_001.png)
+%         filename = sprintf('plot_%03d.png', i);
+
+%         % Save the figure
+%         saveas(fig, filename);
+
+%         % Close the figure to save memory
+%         close(fig);
+%     end
+% end
