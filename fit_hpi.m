@@ -6,7 +6,7 @@ function opm_trans = fit_hpi(hpi_path, aux_file, save_path, params)
 % Params: hpi_freq.
 
 
-hpi_files = dir(fullfile(hpi_path,'*HPI*_raw.fif'));
+hpi_files = dir(fullfile(hpi_path,'*HPI*.fif'));
 
 hpi = cell(length(hpi_files),1);
 
