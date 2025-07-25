@@ -201,7 +201,12 @@ save(fullfile(save_path, [params.paradigm '_badchs']), ...
     'badchs_outlier',"-v7.3"); 
 
 cfg = [];
-cfg.channel = setdiff(data.label,badchs);
+
+% save good channels
+include_chs = setdiff(data.label,badchs);
+cfg.channel = include_chs;
+save(fullfile(save_path, [params.paradigm '_include_chs']), ...
+    'include_chs',"-v7.3");
 data = ft_selectdata(cfg, data);
 hdr = data.hdr;
 
@@ -277,11 +282,11 @@ data = ft_selectdata(cfg, data);
 data.grad = ft_convert_units(data.grad,'cm');
 
 %% Save bad trials
-[~,idx]=ismember(opm_cleaned.sampleinfo,badtrl_jump,'rows');
+[~,idx]=ismember(data.sampleinfo,badtrl_jump,'rows');
 badtrl_opm_jump = find(idx);
-[~,idx]=ismember(opm_cleaned.sampleinfo,badtrl_std,'rows');
+[~,idx]=ismember(data.sampleinfo,badtrl_std,'rows');
 badtrl_opm_std = find(idx);
-save(fullfile(save_path, [params.sub '_opm_badtrls']), ...
+save(fullfile(save_path, [params.paradigm '_opm_badtrls']), ...
     'badtrl_opm_jump', ...
     'badtrl_opm_std',"-v7.3"); 
 
