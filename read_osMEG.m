@@ -175,7 +175,7 @@ if ~opm_only
     include_channels = [EOG_channels; ECG_channels; EEG_channels; MISC_channels; TRIG_channels];
     
     data = opm_epo_ds; 
-    data.elec = aux_epo.elec;
+    %data.elec = aux_epo.elec; % elec is not in aux_epo
     data.time = aux_epo.time;
     data.label = [data.label; aux_epo.label(include_channels)];
     data.hdr.label = data.label;
