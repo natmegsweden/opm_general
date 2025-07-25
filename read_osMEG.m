@@ -203,6 +203,7 @@ save(fullfile(save_path, [params.paradigm '_badchs']), ...
 cfg = [];
 cfg.channel = setdiff(data.label,badchs);
 data = ft_selectdata(cfg, data);
+hdr = data.hdr;
 
 %% Spatiotemporal filtering
 cfg = []; % separate ExG channels
@@ -231,11 +232,12 @@ end
 
 % Recombine with ExG channels
 data.label = vertcat(data.label,ExG.label);
-data.hdr = comb.hdr;
-incl = ismember(comb.hdr.label,data.label);
-data.hdr.label = comb.hdr.label(incl);
-data.hdr.chantype = comb.hdr.chantype(incl);
-data.hdr.chanunit = comb.hdr.chanunit (incl);
+
+data.hdr = hdr;
+incl = ismember(hdr.label,data.label);
+data.hdr.label = hdr.label(incl);
+data.hdr.chantype = hdr.chantype(incl);
+data.hdr.chanunit = hdr.chanunit (incl);
 for i = 1:length(data.trial)
     data.trial{i} = vertcat(data.trial{i}, ExG.trial{i}); 
 end
