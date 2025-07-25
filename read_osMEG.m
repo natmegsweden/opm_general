@@ -209,13 +209,13 @@ cfg = []; % separate ExG channels
 cfg.channel = {'EOG*', 'ECG*'};
 ExG = ft_selectdata(cfg,data);
 
-if params.do_hfc
+if params.apply_hfc
     cfg = [];
     cfg.channel = '*bz';
     cfg.order = params.hfc_order;
     cfg.residualcheck = 'no';
     data = ft_denoise_hfc(cfg, data);
-elseif params.do_amm
+elseif params.apply_amm
     cfg = [];
     cfg.channel = '*bz';
     cfg.updatesens = 'yes';
