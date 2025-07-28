@@ -1,6 +1,15 @@
 function h = plot_source_distribution(srcdist, peak, params)
-%UNTITLED3 Summary of this function goes here
-%   Detailed explanation goes here
+%plot_source_distribution Function for plotting source distributions
+%   3D plot of a source distribution on a sourcemodel. Expects peak to
+%   contain the fields peak.latency (latency at which to display source
+%   activation) and peak.fahm.
+%   Use params.mne_view to select how the figure should be displayed. 
+%   params.mne_view options:
+%   [az el]     Azimutal and elevation angles determining the view angle.
+%   'sides'     Display sourcemodel from left and right to show both
+%               hemisphres
+%   default     If peak structure from FullAreaHalfMax function exists,
+%               orient camera to focus on peak activation
 if isfield(params,'mne_view') && isnumeric(params.mne_view) && length(params.mne_view) == 2
     cfg = [];
     cfg.method          = 'surface';
@@ -65,14 +74,16 @@ else
     ft_sourceplot(cfg, srcdist)
     lighting gouraud
     material dull
-    center = mean(srcdist.pos,1);
-    direction = mean(peak.loc,1) - center;
-    direction = direction / norm(direction);
-    distance = 200;
-    campos(center + distance * direction);
-    camtarget(peak.loc);
-    camup([0 0 1]);
-    camproj('perspective');
+    if isfield(peak.loc)
+        center = mean(srcdist.pos,1);
+        direction = mean(peak.loc,1) - center;
+        direction = direction / norm(direction);
+        distance = 200;
+        campos(center + distance * direction);
+        camtarget(peak.loc);
+        camup([0 0 1]);
+        camproj('perspective');
+    end
     if length(peak.fahm)>1
         title([params.paradigm '-' params.modality ' (FAHM_R=' num2str(peak.fahm(2),3) 'cm^2; FAHM_L=' num2str(peak.fahm(1),3) 'cm^2; t=' num2str(round(peak.latency*1e3)) 'ms)'])
     else
