@@ -37,7 +37,7 @@ function params = get_params(modality)
     params = [];
     % Trial lenght
     params.pre = 0.3; % Trial prestim in seconds
-    params.post = 0.1; % Trial poststim in seconds
+    params.post = 0.8; % Trial poststim in seconds
     params.pad = 0.2; % Trial (pre and post) padding in seconds
     params.delay = 0.01; % Stimulus delay in seconds (e.g., 0.01 for eartubes or 0.041 for membranes).
 
@@ -79,11 +79,18 @@ function params = get_params(modality)
     params.source_fixedori = true; % use fixed orientation sources (along vertex normals); if false: use three orthogonal sources per location
     params.use_cov = 'resting_state'; % noise cov to use; default= ' ' for prestim, alt: 'resting_state', 'empty_room'
 
+    % Peak settings
+    params.peaks = []
+    params.peaks.label = {'M100', 'M300'}; % Peak labels
+    params.peaks.peak_latency = {0.1, 0.3}; % Peak latencies in seconds
+
     switch modality
         case 'opm'
             params.modality = 'opm';
             params.layout = 'fieldlinebeta2bz_helmet.mat'; % Layout for OPM data
             params.chs = '*_b*'; % Channel pattern for OPM data
+            params.amp_scaler = 1e15;
+            params.amp_label = 'B [fT]';
         case 'meg'
             params.modality = 'squid';
             params.layout = 'neuromag306mag.lay';
@@ -93,7 +100,7 @@ end
 
 function paradigm = get_paradigm()
     paradigm.paradigms = {'AudOdd'}; % Paradigms to analyze for all participants and sessions
-    paradigm.trigger_codes = [3 5 11 13]; % Trigger values to timelock
+    paradigm.trigger_codes = {3 5 11 13}; % Trigger values to timelock
     paradigm.trigger_labels = {'low_nogo', 'low_go', 'high_nogo', 'high_go'}; % Labels corresponding to the trigger values    
 end
 
