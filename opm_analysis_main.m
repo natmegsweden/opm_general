@@ -99,7 +99,7 @@ for i_sub = 1:length(subject_list)
             disp(['No OPM data found for subject: ' params.sub ' in session: ' params.ses])
             continue
         end
-        hpi_path = fullfile(raw_path,'osmeg');
+        hpi_path = fullfile(raw_path,'meg');
         %% Loop over paradigm.paradigms/tasks
         for i_paradigm = 1:length(paradigm.paradigms)
             params.paradigm = paradigm.paradigms{i_paradigm};
@@ -129,65 +129,66 @@ for i_sub = 1:length(subject_list)
             end
             
             if overwrite.timelock == true || ~exist(fullfile(save_path, [params.paradigm '_timelocked.mat']),'file')
-                params.modality = 'opm';
-                params.layout = 'fieldlinebeta2bz_helmet.mat';
-                params.chs = '*bz';
-                params.amp_scaler = 1e15;
-                params.amp_label = 'B [fT]';
                 timelocked = timelock(data_ica, save_path, params);
                 save(fullfile(save_path, [params.paradigm '_timelocked']), 'timelocked', '-v7.3'); 
                 clear timelocked
             end
             clear data_ica
     
-            if squid
-                %% Read and preproc - SQUID-MAG
-                params.modality = 'squid';
-                params.layout = 'neuromag306mag.lay';
-                params.chs = 'meg';
+            % if squid
+            %     %% Read and preproc - SQUID-MAG
+            %     params.modality = 'squid';
+            %     params.layout = 'neuromag306mag.lay';
+            %     params.chs = 'meg';
         
-                if overwrite.preproc == true || ~exist(fullfile(save_path, [params.paradigm '_data_ica_squidmag.mat']),'file')
-                    ft_hastoolbox('mne', 1);
+            %     if overwrite.preproc == true || ~exist(fullfile(save_path, [params.paradigm '_data_ica_squidmag.mat']),'file')
+            %         ft_hastoolbox('mne', 1);
         
-                    % Read data 
-                    disp(['Reading file: ' num2str(i_paradigm) '/' num2str(length(paradigm.paradigms)) '...'])
-                    data_epo = read_cvMEG(squid_files{i_paradigm}, params); % Read data
+            %         % Read data 
+            %         disp(['Reading file: ' num2str(i_paradigm) '/' num2str(length(paradigm.paradigms)) '...'])
+            %         data_epo = read_cvMEG(squid_files{i_paradigm}, params); % Read data
                     
-                    % ICA
-                    disp('Running ICA ...')
-                    if sum(contains(data_epo.label,'EOG'))<1 || sum(contains(data_epo.label,'ECG'))<1 % No ExG data
-                        params.manual_ica = 1;
-                        params.save_ica = 1;
-                    end
-                    data_ica = ica_MEG(data_epo, save_path, params);
-                    save(fullfile(save_path, [params.paradigm '_data_ica_squidmag']), 'data_ica',"-v7.3"); disp('done');
-                    clear data_epo
-                else
-                    data_ica = load(fullfile(save_path, [params.paradigm '_data_ica_squidmag.mat'])).data_ica;
-                end
+            %         % ICA
+            %         disp('Running ICA ...')
+            %         if sum(contains(data_epo.label,'EOG'))<1 || sum(contains(data_epo.label,'ECG'))<1 % No ExG data
+            %             params.manual_ica = 1;
+            %             params.save_ica = 1;
+            %         end
+            %         data_ica = ica_MEG(data_epo, save_path, params);
+            %         save(fullfile(save_path, [params.paradigm '_data_ica_squidmag']), 'data_ica',"-v7.3"); disp('done');
+            %         clear data_epo
+            %     else
+            %         data_ica = load(fullfile(save_path, [params.paradigm '_data_ica_squidmag.mat'])).data_ica;
+            %     end
                 
-                if overwrite.timelock == true || ~exist(fullfile(save_path, [params.paradigm '_timelocked.mat']),'file')
-                    params.modality = 'squidmag';
-                    params.layout = 'neuromag306mag.lay';
-                    params.chs = 'megmag';
-                    params.amp_scaler = 1e15;
-                    params.amp_label = 'B [fT]';
-                    timelocked = timelock(data_ica, save_path, params);
-                    save(fullfile(save_path, [params.paradigm '_timelocked_squidmag']), 'timelocked', '-v7.3'); 
-                    clear timelocked
-                end
-                clear data_ica
-            end
+            %     if overwrite.timelock == true || ~exist(fullfile(save_path, [params.paradigm '_timelocked.mat']),'file')
+            %         params.modality = 'squidmag';
+            %         params.layout = 'neuromag306mag.lay';
+            %         params.chs = 'megmag';
+            %         params.amp_scaler = 1e15;
+            %         params.amp_label = 'B [fT]';
+            %         timelocked = timelock(data_ica, save_path, params);
+            %         save(fullfile(save_path, [params.paradigm '_timelocked_squidmag']), 'timelocked', '-v7.3'); 
+            %         clear timelocked
+            %     end
+            %     clear data_ica
+            % end
         end
         
         %% HPI localization
         ft_hastoolbox('mne',1);
         
+        % create save path for mri and check if folder exists, if not, create
+        save_path_mri = fullfile(save_path, 'mri');
+        if ~exist(save_path_mri, 'dir')
+            mkdir(save_path_mri)
+        end
+        
         if exist(fullfile(save_path_mri, 'opm_trans.mat'),'file') && overwrite.coreg==false
             disp(['Not overwriting OPM transform for ' params.sub]);
         else
             ft_hastoolbox('mne', 1);
-            params.include_chs = load(fullfile(save_path, ['include_chs' num2str(length(opm_files))])).include_chs;
+            params.include_chs = load(fullfile(save_path, [params.paradigm '_include_chs.mat'])).include_chs;
             clear data_ica
             opm_trans = fit_hpi(hpi_path, aux_files{1}, save_path, params);
         
@@ -261,8 +262,6 @@ for i_sub = 1:length(subject_list)
             end
             
             % MNE fit
-            params.modality = 'opm';
-            params.chs = '*bz';
             fit_mne(save_path, opm_timelockedT, headmodel, sourcemodel, sourcemodel_inflated, params);
     
             if squid
