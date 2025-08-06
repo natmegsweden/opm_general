@@ -59,7 +59,8 @@ for i_trigger = 1:length(params.trigger_codes)
     
     % Butterfly
     ax1 = axes('Position', [left, bottom + height_bottom + gap, width, height_top]);
-    plot(dat.time*1e3,timelocked{i_trigger}.avg*params.amp_scaler)
+    % plot time (here derived from the first trial) and the average timelocked
+    plot(data.time{1}*1e3,timelocked{i_trigger}.avg*params.amp_scaler)
     xlabel('t [msec]')
     ylabel(params.amp_label)
     xlim([-params.pre params.post]*1e3);
@@ -71,7 +72,7 @@ for i_trigger = 1:length(params.trigger_codes)
     ax2.XTickLabel = [];
     ylabel('GFP')
     xlim([-params.pre params.post]*1e3);
-    saveas(h, fullfile(save_path, 'figs', [params.sub '_' params.modality '_' params.peaks{i_peak}.label '_butterfly_trig-' params.trigger_labels{i_trigger} '.jpg']))
+    saveas(h, fullfile(save_path, 'figs', [params.sub '_' params.modality '_butterfly_trig-' params.trigger_labels{i_trigger} '.jpg']))
     close all
 
     %% Plot selected channel
