@@ -97,7 +97,8 @@ if ~opm_only
     trl_aux(:,1) = find(trig)-(params.pre+params.pad)*aux_raw.fsample;
     trl_aux(:,2) = find(trig)+(params.post+params.pad)*aux_raw.fsample;
     trl_aux(:,3) = -(params.pre+params.pad)*aux_raw.fsample;
-    trl_aux(:,4) = aux_raw.trial{1}(i_trig_aux,trig)/1000000; % trigger values are 1x10^6 instead of 1 so add adjustment here
+    % trl_aux(:,4) = aux_raw.trial{1}(i_trig_aux,trig)/1000000; % trigger values are 1x10^6 instead of 1 so add adjustment here when using brainvision format
+    trl_aux(:,4) = aux_raw.trial{1}(i_trig_aux,trig); 
     trl_aux(:,1:2) = trl_aux(:,1:2) + floor(params.delay*aux_raw.fsample); % adjust for stim delay
     trl_aux = round(trl_aux);
     

@@ -2,6 +2,8 @@
 % TO DO:
 % - Figure out where completed_meg_sessions_long_DATA are stored
 % - Figure out outputpath (now saved to ~/temp_output)
+% - After proper BIDSification, use EEG.fif from bids structure, 
+%       now uses from raw as the brainvision format does not have the head model 
 
 %% Reset all
 clear all
@@ -29,12 +31,18 @@ squid = false;
 %% Subjects + dates
 subsessions = readtable(fullfile(pwd, '../completed_meg_sessions_long_DATA_2025-07-23.csv'), 'Delimiter',',');
 subject_list = unique(subsessions.new_subject_id);
+natmeg_ids = unique(subsessions.old_subject_id);
+
+if ~length(subject_list)==length(natmeg_ids)
+    error('Mismatch between new and old subject IDs')
+end
 
 %% Loop over subjects
 for i_sub = 1:length(subject_list)
     % zeropad to three zeros
     params.sub = ['sub-' num2str(subject_list(i_sub),'%03d')];
     disp(params.sub)
+    disp(natmeg_ids(i_sub))
 
     % check if subject is in skip list
     if ismember(params.sub, skip.subjects)
@@ -50,6 +58,7 @@ for i_sub = 1:length(subject_list)
 
     % find sessions for subject
     sessions = subsessions(subsessions.new_subject_id==subsessions.new_subject_id(i_sub),:).new_session_id;
+    dates = subsessions(subsessions.new_subject_id==subsessions.new_subject_id(i_sub),:).old_session_id;
     
     %% Loop over sessions
     for i_ses = 1:length(sessions)
@@ -64,9 +73,12 @@ for i_sub = 1:length(subject_list)
 
         fprintf('working on %s %s \n',params.sub,params.ses);
 
-        %% Paths
+        %% Get subject-session paths
         raw_path = fullfile(paths.base_data_path, params.sub, params.ses);
         save_path = fullfile(paths.base_save_path, params.sub, params.ses);
+
+        % temporarily get auxilary data from raw instead of bids folder
+        tmp_eeg_raw_path = fullfile('~/../../projects/capsi/raw/squid',['NatMEG_' num2str(natmeg_ids(i_sub))], num2str(dates(i_ses)),'meg');
         if ~exist(save_path, 'dir')
            mkdir(save_path)
         end
@@ -91,7 +103,10 @@ for i_sub = 1:length(subject_list)
                     opm_files{i_paradigm} = fullfile(tmp.folder, tmp.name);
                 end
                 disp(opm_files{i_paradigm})
-                tmp_eeg = dir(fullfile(raw_path,'eeg',['*' paradigm.paradigms{i_paradigm} '_acq-triux' '*' '_eeg.eeg']));
+
+                % temporarily look for EEG.fif in raw folder instead of brainvision eeg.eeg in bids folder
+                %tmp_eeg = dir(fullfile(raw_path,'eeg',['*' paradigm.paradigms{i_paradigm} '_acq-triux' '*' '_eeg.eeg']));
+                tmp_eeg = dir(fullfile(tmp_eeg_raw_path, [paradigm.paradigms{i_paradigm} '*' 'EEG.fif']));
                 aux_files{i_paradigm} = fullfile(tmp_eeg.folder, tmp_eeg.name); % corresponding aux files containing EOG/ECG
             end
         end
