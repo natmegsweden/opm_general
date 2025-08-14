@@ -4,6 +4,8 @@
 % - Figure out outputpath (now saved to ~/temp_output)
 % - After proper BIDSification, use EEG.fif from bids structure, 
 %       now uses from raw as the brainvision format does not have the head model 
+% - Names of saved output now don't include OPM, which could cause issues when the
+%       SQUID pipline is developed and also doesnt include a modality folder or suffix
 
 %% Reset all
 clear all
@@ -106,7 +108,7 @@ for i_sub = 1:length(subject_list)
 
                 % temporarily look for EEG.fif in raw folder instead of brainvision eeg.eeg in bids folder
                 %tmp_eeg = dir(fullfile(raw_path,'eeg',['*' paradigm.paradigms{i_paradigm} '_acq-triux' '*' '_eeg.eeg']));
-                tmp_eeg = dir(fullfile(tmp_eeg_raw_path, [paradigm.paradigms{i_paradigm} '*' 'EEG.fif']));
+                tmp_eeg = dir(fullfile(tmp_eeg_raw_path, [paradigm.paradigms{i_paradigm} '*' 'EEG' '*' '.fif']));
                 aux_files{i_paradigm} = fullfile(tmp_eeg.folder, tmp_eeg.name); % corresponding aux files containing EOG/ECG
             end
         end
@@ -149,45 +151,6 @@ for i_sub = 1:length(subject_list)
                 clear timelocked
             end
             clear data_ica
-    
-            % if squid
-            %     %% Read and preproc - SQUID-MAG
-            %     params.modality = 'squid';
-            %     params.layout = 'neuromag306mag.lay';
-            %     params.chs = 'meg';
-        
-            %     if overwrite.preproc == true || ~exist(fullfile(save_path, [params.paradigm '_data_ica_squidmag.mat']),'file')
-            %         ft_hastoolbox('mne', 1);
-        
-            %         % Read data 
-            %         disp(['Reading file: ' num2str(i_paradigm) '/' num2str(length(paradigm.paradigms)) '...'])
-            %         data_epo = read_cvMEG(squid_files{i_paradigm}, params); % Read data
-                    
-            %         % ICA
-            %         disp('Running ICA ...')
-            %         if sum(contains(data_epo.label,'EOG'))<1 || sum(contains(data_epo.label,'ECG'))<1 % No ExG data
-            %             params.manual_ica = 1;
-            %             params.save_ica = 1;
-            %         end
-            %         data_ica = ica_MEG(data_epo, save_path, params);
-            %         save(fullfile(save_path, [params.paradigm '_data_ica_squidmag']), 'data_ica',"-v7.3"); disp('done');
-            %         clear data_epo
-            %     else
-            %         data_ica = load(fullfile(save_path, [params.paradigm '_data_ica_squidmag.mat'])).data_ica;
-            %     end
-                
-            %     if overwrite.timelock == true || ~exist(fullfile(save_path, [params.paradigm '_timelocked.mat']),'file')
-            %         params.modality = 'squidmag';
-            %         params.layout = 'neuromag306mag.lay';
-            %         params.chs = 'megmag';
-            %         params.amp_scaler = 1e15;
-            %         params.amp_label = 'B [fT]';
-            %         timelocked = timelock(data_ica, save_path, params);
-            %         save(fullfile(save_path, [params.paradigm '_timelocked_squidmag']), 'timelocked', '-v7.3'); 
-            %         clear timelocked
-            %     end
-            %     clear data_ica
-            % end
         end
         
         %% HPI localization
@@ -207,7 +170,7 @@ for i_sub = 1:length(subject_list)
             clear data_ica
             opm_trans = fit_hpi(hpi_path, aux_files{1}, save_path, params);
         
-            opm_timelockedT = load(fullfile(save_path, [params.sub '_opm_timelocked.mat'])).timelocked;
+            opm_timelockedT = load(fullfile(save_path, [params.paradigm '_timelocked.mat'])).timelocked;
             for i = 1:length(params.trigger_labels)
                 opm_timelockedT{i}.grad.chanpos = opm_trans.transformPointsForward(opm_timelockedT{i}.grad.chanpos);
                 opm_timelockedT{i}.grad.coilpos = opm_trans.transformPointsForward(opm_timelockedT{i}.grad.coilpos);
