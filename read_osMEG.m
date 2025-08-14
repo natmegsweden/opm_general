@@ -44,6 +44,10 @@ cfg.coordsys        = 'dewar';
 cfg.coilaccuracy    = 0;
 opm_raw = ft_preprocessing(cfg);
 
+% correct channel labels
+% opm_raw.label = opm_raw.hdr.orig{1}.orig.ch_names';
+
+
 % original code does not find trigger channel (channel names seem to be alphabetically sorted and don't correspond)
 % to the channels in the raw data. 
 %i_trig_opm = find(contains(opm_raw.label,'di'));
