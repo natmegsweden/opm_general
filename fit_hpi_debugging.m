@@ -1,3 +1,24 @@
+save_path = '~/temp_output/sub-002/ses-02';
+aux_file = '/data/projects/capsi/raw/squid/NatMEG_1174/240517/meg/AudOddEEG1.fif';
+
+overwrite = config('overwrite');
+params = config('params', 'opm');
+paradigm = config('paradigm');
+paths = config('paths');
+skip = config('skip');
+
+raw_path = fullfile(paths.base_data_path, 'sub-002', 'ses-02');
+
+hpi_path = fullfile(raw_path,'meg');
+i_file = 1;
+hpi_files = dir(fullfile(hpi_path,'*HPIafter*.fif'));
+
+hpi = cell(length(hpi_files),1);
+
+
+
+params.paradigm = 'AudOdd';
+params.include_chs = load(fullfile(save_path, [params.paradigm '_include_chs.mat'])).include_chs;
 %% --- Read triggers ---
 % OPM
 cfg = [];
@@ -8,6 +29,9 @@ cfg.bpfilter        = 'yes';
 cfg.bpfreq          = [params.hpi_freq-5 params.hpi_freq+5];
 raw = ft_preprocessing(cfg);
 raw.grad = ft_convert_units(raw.grad,'cm');
+
+%% Fix channel labels
+%raw.label = raw.hdr.orig.ch_names';
 
 %% Epoch
 cfg = [];
@@ -31,8 +55,8 @@ timelocked = ft_timelockanalysis(cfg,epo);
 timelocked.avg = zeros(size(timelocked.avg,1),1);
 timelocked.time = zeros(size(timelocked.time,1),1);
 
-hpi_chs = find(contains(raw.label,'hpiin'));
-hpi_labels = raw.label(hpi_chs);
+hpi_chs = find(contains(raw.hdr.orig.ch_names,'hpiin'));
+hpi_labels = raw.hdr.orig.ch_names(hpi_chs);
 hpi_labels2 = hpi_labels;
 hpi_trials = false(length(hpi_chs),length(epo.trial));
 
@@ -47,9 +71,9 @@ filename = sprintf('plot_hpis.png');
 % Save the figure
 saveas(fig, filename)
 
-% check for all epo.trials if the peak-to-peak amplitude is more than 1e-10
+% check for all epo.trials if the peak-to-peak amplitude is more than 1e-3
 for trl = 1:length(epo.trial)
-    hpi_trials(:,trl) = (max(epo.trial{trl}(hpi_chs,:),[],2)-min(epo.trial{trl}(hpi_chs,:),[],2))>1e-10;
+    hpi_trials(:,trl) = (max(epo.trial{trl}(hpi_chs,:),[],2)-min(epo.trial{trl}(hpi_chs,:),[],2))>1e-3;
 end
 
 for i = 1:length(hpi_chs)
@@ -63,7 +87,7 @@ for i = 1:length(hpi_chs)
 end
 
 hpi_chs = hpi_chs(hpi_on);
-hpi_trl = hpi_trl(hpi_on);
+% hpi_trl = hpi_trl(hpi_on);
 
 %% Prepare for dipole grid search
 % [X,Y,Z] = meshgrid((min(epo.grad.chanpos(:,1))-0.01):0.005:(max(epo.grad.chanpos(:,1))+0.01),(min(epo.grad.chanpos(:,2))-0.01):0.005:(max(epo.grad.chanpos(:,2))+0.01),(min(epo.grad.chanpos(:,3))-0.01):0.005:(max(epo.grad.chanpos(:,3))+0.01));
@@ -82,6 +106,7 @@ hpi{i_file}.dip_gof = zeros(length(hpi_chs),1);
 hpi2{i_file} = [];
 
 for coil = 1:length(hpi_chs)
+    disp(['fitting coil ' num2str(coil) hpi_chs(coil)])
     % Lock-in
     R = zeros(size(epo.trial{hpi_trl{coil}(1)},1),length(hpi_trl{coil}));
     Theta = zeros(size(epo.trial{hpi_trl{coil}(1)},1),length(hpi_trl{coil}));
@@ -106,7 +131,7 @@ for coil = 1:length(hpi_chs)
 %         close
     disp(['Max amp: ' num2str(max(abs(timelocked.avg(find(contains(timelocked.label,'bz'))))))])
 
-    if any(abs(timelocked.avg(find(contains(timelocked.label,'bz')))) > 1e-12)
+    if any(abs(timelocked.avg(find(contains(timelocked.label,'bz')))) > 1e-13)
         %% Dipole fit
         cfg = [];
         cfg.method = 'infinite';
@@ -134,7 +159,7 @@ for coil = 1:length(hpi_chs)
         cfg = [];
         cfg.numdipoles      = 1;
         cfg.gridsearch      = 'yes';
-        cfg.channel = params.include_chs;
+        %cfg.channel = params.include_chs;
         cfg.sourcemodel     = sourcemodel;
         cfg.nonlinear       = 'yes';
         cfg.headmodel       = headmodel;
