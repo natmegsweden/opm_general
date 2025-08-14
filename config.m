@@ -24,8 +24,8 @@ end
 %% Overwrite specific steps in the analysis 
 function overwrite = get_overwrite()
     overwrite = [];
-    overwrite.preproc = false;
-    overwrite.timelock = false;
+    overwrite.preproc = true;
+    overwrite.timelock = true;
     overwrite.mri = false;
     overwrite.coreg = false;
     overwrite.dipole = false;
