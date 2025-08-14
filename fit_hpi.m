@@ -6,7 +6,7 @@ function opm_trans = fit_hpi(hpi_path, aux_file, save_path, params)
 % Params: hpi_freq.
 
 
-hpi_files = dir(fullfile(hpi_path,'*HPI*.fif'));
+hpi_files = dir(fullfile(hpi_path,'*HPIbefore*.fif'));
 
 hpi = cell(length(hpi_files),1);
 
@@ -21,6 +21,9 @@ for i_file = 1:length(hpi_files)
     cfg.bpfreq          = [params.hpi_freq-5 params.hpi_freq+5];
     raw = ft_preprocessing(cfg);
     raw.grad = ft_convert_units(raw.grad,'cm');
+
+    %% Fix channel labels
+    %raw.label = raw.hdr.orig.ch_names;
 
     %% Epoch
     cfg = [];
@@ -44,8 +47,8 @@ for i_file = 1:length(hpi_files)
     timelocked.avg = zeros(size(timelocked.avg,1),1);
     timelocked.time = zeros(size(timelocked.time,1),1);
 
-    hpi_chs = find(contains(raw.label,'hpiin'));
-    hpi_labels = raw.label(hpi_chs);
+    hpi_chs = find(contains(raw.hdr.orig.ch_names,'hpiin'));
+    hpi_labels = raw.hdr.orig.ch_names(hpi_chs);
     hpi_labels2 = hpi_labels;
     hpi_trials = false(length(hpi_chs),length(epo.trial));
 
@@ -119,7 +122,7 @@ for i_file = 1:length(hpi_files)
     %         close
         disp(['Max amp: ' num2str(max(abs(timelocked.avg(find(contains(timelocked.label,'bz'))))))])
 
-        if any(abs(timelocked.avg(find(contains(timelocked.label,'bz')))) > 1e-12)
+        if any(abs(timelocked.avg(find(contains(timelocked.label,'bz')))) > 1e-3)
             %% Dipole fit
             cfg = [];
             cfg.method = 'infinite';
@@ -141,6 +144,7 @@ for i_file = 1:length(hpi_files)
             cfg = [];
             cfg.method = 'basedonpos';
             cfg.sourcemodel.pos = posT;
+            cfg.units = 'cm';
             %cfg.sourcemodel.inside = inside;
             sourcemodel = ft_prepare_sourcemodel(cfg);
 
