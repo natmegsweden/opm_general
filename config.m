@@ -24,8 +24,8 @@ end
 %% Overwrite specific steps in the analysis 
 function overwrite = get_overwrite()
     overwrite = [];
-    overwrite.preproc = true;
-    overwrite.timelock = true;
+    overwrite.preproc = false;
+    overwrite.timelock = false;
     overwrite.mri = false;
     overwrite.coreg = false;
     overwrite.dipole = false;
@@ -114,7 +114,7 @@ end
 
 function skip = get_skip()
     skip = [];
-    skip.subjects = {'sub-001', 'sub-002', 'sub-003'}; % Subjects to skip entirely (make sure they are zero padded to the amount of digitis in your bids foder)
+    skip.subjects = {}; % Subjects to skip entirely (make sure they are zero padded to the amount of digitis in your bids foder)
     skip.sessions = {}; % Sessions to skip entirely
-    skip.subsessions = {'sub-001_ses-01', 'sub-002_ses-02'}; % Subjects-session combinations to skip 
+    skip.subsessions = {}; % Subjects-session combinations to skip
 end
