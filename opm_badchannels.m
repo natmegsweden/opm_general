@@ -13,10 +13,10 @@ z_threshold     = ft_getopt(params, 'z_threshold', 20);
 njump_threshold = ft_getopt(params, 'njump_threshold', 0.05);
 
 cfg = [];
-cfg.channel = '*bz';
+cfg.channel = '*bz*';
 data = ft_selectdata(cfg, data);
 
-chs = find(contains(data.label,'_bz'));
+chs = find(contains(data.label,'_bz*'));
 
 %% Find channels with flat segments or high std
 cfg = [];
