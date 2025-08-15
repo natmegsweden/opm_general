@@ -34,16 +34,12 @@ squid = false;
 subsessions = readtable(fullfile(pwd, '../completed_meg_sessions_long_DATA_2025-07-23.csv'), 'Delimiter',',');
 subject_list = unique(subsessions.new_subject_id);
 
-if ~length(subject_list)==length(natmeg_ids)
-    error('Mismatch between new and old subject IDs')
-end
-
 %% Loop over subjects
 for i_sub = 1:length(subject_list)
     % zeropad to three zeros
     params.sub = ['sub-' num2str(subject_list(i_sub),'%03d')];
     disp(params.sub)
-    natmeg_id = unique(subsessions(subsessions.new_subject_id==subsessions.new_subject_id(i_sub),:).old_subject_id);
+    natmeg_id = unique(subsessions(subsessions.new_subject_id==subject_list(i_sub),:).old_subject_id);
 
     if length(natmeg_id)>1
         error('Multiple natmeg ids for subject %s', params.sub)
@@ -63,8 +59,8 @@ for i_sub = 1:length(subject_list)
     end
 
     % find sessions for subject
-    sessions = subsessions(subsessions.new_subject_id==subsessions.new_subject_id(i_sub),:).new_session_id;
-    dates = subsessions(subsessions.new_subject_id==subsessions.new_subject_id(i_sub),:).old_session_id;
+    sessions = subsessions(subsessions.new_subject_id==subject_list(i_sub),:).new_session_id;
+    dates = subsessions(subsessions.new_subject_id==subject_list(i_sub),:).old_session_id;
     
     %% Loop over sessions
     for i_ses = 1:length(sessions)
