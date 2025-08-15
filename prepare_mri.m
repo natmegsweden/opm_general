@@ -11,7 +11,7 @@ function prepare_mri(mri_path,meg_file,save_path, params)
         params.src_density = '8'; % default source density to use. Results in ~16k sources
     end
 
-    mri_file = fullfile(mri_path, 'mri', 'orig','001.mgz');
+    mri_file = fullfile(mri_path, '00000002', '00000001.dcm');
     if ~exist(mri_file,'file')
         error(['Did not find MRI file: ' mri_file])
     end

@@ -3,75 +3,74 @@ clear all
 close all
 restoredefaultpath
 
-%% Base paths
-if contains(pwd,'/home/chrpfe')
-    % Server:
-    base_data_path = '/archive/21099_opm/';
-    base_save_path = '/home/chrpfe/Documents/21099_opm/';
-    base_matlab_path = '/home/chrpfe/Documents/MATLAB/';
-    project_scripts_path = '/home/chrpfe/Documents/MATLAB/21099_opm/phalanges';
-    on_server = true;
-else
-    % Laptop:
-    base_data_path = '/Volumes/dataarchvie/21099_opm';
-    base_save_path = '/Users/christophpfeiffer/data_local/Benchmarking/';
-    base_matlab_path = '/Users/christophpfeiffer/Dropbox/Mac/Documents/MATLAB';
-    project_scripts_path = '/Users/christophpfeiffer/opm_phalanges';
-    on_server = false;
-end
+% make sure that pwd is opm_general in the users home folder
+disp(pwd)
+addpath(pwd)
+overwrite = config('overwrite');
+params = config('params', 'opm');
+paradigm = config('paradigm');
+paths = config('paths');
+skip = config('skip');
 
-%% Set up fieldtrip
-addpath(fullfile(base_matlab_path,'fieldtrip/')) % Fieldtrip path
-addpath(fullfile(base_matlab_path,'fieldtrip_private')) % Fieldtrip private functions
-addpath(project_scripts_path)
+%% Set up fieldtrip (now assumed to be in users home folder)
+addpath(fullfile(pwd,'../fieldtrip')) % Fieldtrip path
 ft_defaults
 
-global ft_default
-ft_default.showcallinfo = 'no';
-
 %% Subjects + dates
-subses = {'0005' '240208';
-    '0905' '240229';
-    '0916' '240320';
-    '0953' '241104';
-    '1096' '241022';
-    '1153' '240321';
-    '1167' '240425';
-    '1186' '240925';
-    '1190' '241023';
-    '1191' '241024';
-    '1193' '241029';
-    '1194' '241029';
-    '1195' '241030'};
+subsessions = readtable(fullfile(pwd, '../completed_meg_sessions_long_DATA_2025-07-23.csv'), 'Delimiter',',');
+subject_list = unique(subsessions.new_subject_id);
+
 mri_files = {'00000001.dcm' 
     '/mri/sub-15931_T1w.nii.gz'  
     '/nifti/anat/sub-15985_T1w.nii.gz'};
 
-if on_server
-    subs_to_run = 1:size(subses,1);
-else
-    subs_to_run = 2; %1:size(subses,1)
-end
-excl_subs = [1];
-
 %% Loop over subjects
-for i_sub = setdiff(subs_to_run,excl_subs)
-    params.sub = ['sub_' num2str(i_sub,'%02d')];
+for i_sub = 1:length(subject_list)
+    params.sub = ['sub-' num2str(subject_list(i_sub),'%03d')];
 
-    %% Paths
-    raw_path = fullfile(base_data_path,'MEG',['NatMEG_' subses{i_sub,1}], subses{i_sub,2});
-    mri_path = fullfile(base_data_path,'MRI',['NatMEG_' subses{i_sub,1}]);
-    save_path_mri = fullfile(base_save_path,'MRI',params.sub);
-    
-    % Create folders if they do not exist yet
-    if ~exist(fullfile(base_save_path,'MRI'), 'dir')
-        mkdir(fullfile(base_save_path,'MRI'))
+    sessions = subsessions(subsessions.new_subject_id==subject_list(i_sub),:).new_session_id;
+    dates = subsessions(subsessions.new_subject_id==subject_list(i_sub),:).old_session_id;
+
+    natmeg_id = unique(subsessions(subsessions.new_subject_id==subject_list(i_sub),:).old_subject_id);
+
+    for i_ses = 1:length(sessions)
+        % create zeropadded sessions
+        params.ses = ['ses-' num2str(sessions(i_ses),'%02d')];
+        %% Paths
+        % the prepare_mri function needs a path to MRI and a path to the file containing the polhemus headshape (aux_file)
+        %aux_path = fullfile(paths.base_data_path, params.sub, params.ses, 'eeg');
+
+        % currently have to use eeg.fif from RAW instead of bids
+        aux_path = fullfile('~/../../projects/capsi/raw/squid',['NatMEG_' num2str(natmeg_id)], num2str(dates(i_ses)),'meg');
+
+        % similarly get MRI data from raw instead of bids
+        mri_path = fullfile(paths.base_raw_path,'mri',params.sub, params.ses);
+        save_path_mri = fullfile(paths.base_save_path, params.sub, params.ses, 'mri');
+        
+        % Create folders if they do not exist yet
+        if ~exist(save_path_mri, 'dir')
+            mkdir(save_path_mri)
+        end
+
+        % get correct aux file
+        aux_files = [];
+        tmp_eeg = dir(fullfile(aux_path, ['*' 'Aud' '*' 'EEG' '*' '.fif']));
+
+        try
+            aux_file = fullfile(tmp_eeg.folder, tmp_eeg.name);
+        catch
+            disp('No auxiliary files found');
+            disp(params.sub);
+            disp(params.ses);
+            continue
+        end
+
+        %mri_file = fullfile(mri_path, 'orig','001.mgz');
+        prepare_mri(mri_path,aux_file,save_path_mri,params);
+
+        disp(mri_path)
+        disp(aux_file)
+        disp(save_path_mri)
+        close all
     end
-    if ~exist(save_path_mri, 'dir')
-        mkdir(save_path_mri)
-    end
-    meg_file = fullfile(raw_path, 'meg', 'AudOddMEG_proc-tsss+corr98+mc+avgHead_meg.fif');
-    %mri_file = fullfile(mri_path, 'orig','001.mgz');
-    prepare_mri(mri_path,meg_file,save_path_mri);
-    close all
 end
