@@ -27,9 +27,6 @@ skip = config('skip');
 addpath(fullfile(pwd,'../fieldtrip')) % Fieldtrip path
 ft_defaults
 
-%% Analyse squid data?
-squid = false;
-
 %% Subjects + dates
 subsessions = readtable(fullfile(pwd, '../completed_meg_sessions_long_DATA_2025-07-23.csv'), 'Delimiter',',');
 subject_list = unique(subsessions.new_subject_id);
@@ -80,7 +77,7 @@ for i_sub = 1:length(subject_list)
         save_path = fullfile(paths.base_save_path, params.sub, params.ses);
 
         % temporarily get auxilary data from raw instead of bids folder
-        tmp_eeg_raw_path = fullfile('~/../../projects/capsi/raw/squid',['NatMEG_' num2str(natmeg_id)], num2str(dates(i_ses)),'meg');
+        tmp_eeg_raw_path = fullfile(paths.base_raw_path,'squid',['NatMEG_' num2str(natmeg_id)], num2str(dates(i_ses)),'meg');
         if ~exist(save_path, 'dir')
            mkdir(save_path)
         end
@@ -116,6 +113,7 @@ for i_sub = 1:length(subject_list)
             disp(['No OPM data found for subject: ' params.sub ' in session: ' params.ses])
             continue
         end
+
         hpi_path = fullfile(raw_path,'meg');
         %% Loop over paradigm.paradigms/tasks
         for i_paradigm = 1:length(paradigm.paradigms)
@@ -206,14 +204,11 @@ for i_sub = 1:length(subject_list)
             headmodel = load(fullfile(save_path_mri, 'headmodels.mat')).headmodels.headmodel_meg;
             mri_resliced = load(fullfile(save_path_mri, 'mri_resliced.mat')).mri_resliced;
             opm_timelockedT = load(fullfile(save_path, [params.sub '_opm_timelockedT.mat'])).opm_timelockedT;
-            squid_timelocked = load(fullfile(save_path, [params.sub '_squid_timelocked.mat'])).timelocked;
             
             for i_peak = 1:length(params.peaks)
                 peak_opm = load(fullfile(save_path, [params.sub '_opm_' params.peaks{i_peak}.label])).peak; 
                 fit_dipoles(save_path, opm_timelockedT, headmodel, mri_resliced, params);
-                peak_squid = load(fullfile(save_path, [params.sub '_squid_' params.peaks{i_peak}.label])).peak; 
-                fit_dipoles(save_path, squid_timelocked, headmodel, mri_resliced, params);
-                clear peak_opm peak_squid
+                clear peak_opm
             end
             clear squid_timelocked opm_timelockedT
         end
@@ -234,35 +229,18 @@ for i_sub = 1:length(subject_list)
             
             for i = 1:length(opm_timelockedT)
                 opm_timelockedT{i}.cov_RS = load(fullfile(save_path, [params.sub '_resting_state_opm.mat'])).opm_RS_cov;
-                if exist(fullfile(save_path, [params.sub '_ER_squid.mat']),'file')
+                if exist(fullfile(save_path, [params.sub '_ER_opm.mat']),'file')
                     opm_timelockedT{i}.cov_ER = load(fullfile(save_path, [params.sub '_ER_opm.mat'])).opm_ER_cov;
                 end
             end
             
             % MNE fit
             fit_mne(save_path, opm_timelockedT, headmodel, sourcemodel, sourcemodel_inflated, params);
-    
-            if squid
-                %% SQUID
-                clear squid_timelocked        
-                squid_timelocked = load(fullfile(save_path, [params.sub '_squid_timelocked.mat'])).timelocked;
-                
-                for i = 1:length(squid_timelocked)
-                    squid_timelocked{i}.cov_RS = load(fullfile(save_path, [params.sub '_resting_state_squid.mat'])).squid_RS_cov;
-                    if exist(fullfile(save_path, [params.sub '_ER_squid.mat']),'file')
-                        squid_timelocked{i}.cov_ER = load(fullfile(save_path, [params.sub '_ER_squid.mat'])).squid_ER_cov;
-                    end
-                end
-        
-                params.modality = 'squidgrad';
-                params.chs = 'meggrad';
-                fit_mne(save_path, squid_timelocked, headmodel, sourcemodel, sourcemodel_inflated, params);
-            end
         end
     end
 end
 
-save(fullfile(paths.base_save_path, 'group_results.mat'), 'grp_tag_opm','grp_tag_squid','grp_SNR_opm','grp_SNR_squid','grp_pp_opm','grp_pp_squid');
+save(fullfile(paths.base_save_path, 'group_results.mat'), 'grp_tag_opm','grp_SNR_opm','grp_pp_opm');
 
 %% clear and close all, then exit to free memory
 close all

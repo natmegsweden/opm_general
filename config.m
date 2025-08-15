@@ -107,6 +107,7 @@ end
 function paths = get_paths()
     paths = [];
     paths.base_data_path = '~/../../projects/capsi/bids';
+    paths.base_raw_path = '~/../../projects/capsi/raw';
     paths.base_save_path = '~/temp_output';
     paths.base_matlab_path = '/usr/local/MATLAB/R2024b';
     paths.project_scripts_path = '~/opm_general';
