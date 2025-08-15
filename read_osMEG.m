@@ -44,16 +44,17 @@ cfg.coordsys        = 'dewar';
 cfg.coilaccuracy    = 0;
 opm_raw = ft_preprocessing(cfg);
 
-% correct channel labels
-% opm_raw.label = opm_raw.hdr.orig{1}.orig.ch_names';
+% Correct channel names from header and remove -sXX sensor names to match grad structure 
+opm_raw.label = opm_raw.hdr.orig{1}.orig.ch_names';
+opm_raw.label = regexprep(opm_raw.label, '-s\d+$', '');
 
-
-% original code does not find trigger channel (channel names seem to be alphabetically sorted and don't correspond)
-% to the channels in the raw data. 
-%i_trig_opm = find(contains(opm_raw.label,'di'));
+% Find trigger channel 
+i_trig_opm = find(contains(opm_raw.label,'di'));
 
 % hacky solution for now:
-for i = 1:length(opm_raw.label)
+
+%{
+ for i = 1:length(opm_raw.label)
     % check for channel that is 0 over first 10 samples but not the first 20000 samples to avoid picking HPI channels 
     if sum(opm_raw.trial{1}(i,1:10)) == 0 & sum(opm_raw.trial{1}(i,1:200000))
         disp(i)
@@ -73,7 +74,8 @@ for i = 1:length(opm_raw.label)
         % Close the figure to save memory
         close(fig);
     end
-end
+end 
+%}
 
 trig = opm_raw.trial{1}(i_trig_opm,:)>0.5;
 trig = [false trig(2:end)&~trig(1:end-1)];
