@@ -23,7 +23,8 @@ for i_file = 1:length(hpi_files)
     raw.grad = ft_convert_units(raw.grad,'cm');
 
     %% Fix channel labels
-    %raw.label = raw.hdr.orig.ch_names;
+    raw.label = raw.hdr.orig.ch_names';
+    raw.label = regexprep(raw.label, '-s\d+$', '');
 
     %% Epoch
     cfg = [];
@@ -63,9 +64,9 @@ for i_file = 1:length(hpi_files)
     % Save the figure
     saveas(fig, filename)
 
-    % check for all epo.trials if the peak-to-peak amplitude is more than 1e-10
+    % check for all epo.trials if the peak-to-peak amplitude is more than 1e-3
     for trl = 1:length(epo.trial)
-        hpi_trials(:,trl) = (max(epo.trial{trl}(hpi_chs,:),[],2)-min(epo.trial{trl}(hpi_chs,:),[],2))>1e-10;
+        hpi_trials(:,trl) = (max(epo.trial{trl}(hpi_chs,:),[],2)-min(epo.trial{trl}(hpi_chs,:),[],2))>1e-3;
     end
 
     for i = 1:length(hpi_chs)
@@ -79,7 +80,7 @@ for i_file = 1:length(hpi_files)
     end
 
     hpi_chs = hpi_chs(hpi_on);
-    hpi_trl = hpi_trl(hpi_on);
+    %hpi_trl = hpi_trl(hpi_on);
 
     %% Prepare for dipole grid search
     % [X,Y,Z] = meshgrid((min(epo.grad.chanpos(:,1))-0.01):0.005:(max(epo.grad.chanpos(:,1))+0.01),(min(epo.grad.chanpos(:,2))-0.01):0.005:(max(epo.grad.chanpos(:,2))+0.01),(min(epo.grad.chanpos(:,3))-0.01):0.005:(max(epo.grad.chanpos(:,3))+0.01));
@@ -122,7 +123,7 @@ for i_file = 1:length(hpi_files)
     %         close
         disp(['Max amp: ' num2str(max(abs(timelocked.avg(find(contains(raw.hdr.orig.ch_names,'bz'))))))])
 
-        if any(abs(timelocked.avg(find(contains(raw.hdr.orig.ch_names,'bz')))) > 1e-3)
+        if any(abs(timelocked.avg(find(contains(raw.hdr.orig.ch_names,'bz')))) > 1e-13)
             %% Dipole fit
             cfg = [];
             cfg.method = 'infinite';
@@ -216,7 +217,9 @@ for i_file = 1:length(hpi_files)
         h = figure;
         ft_plot_sens(epoT.grad,'unit','cm','DisplayName','senspos'); 
         hold on 
-        for coil = find(hpi2{i_file}.dip_include)'
+        coil_list = find(hpi2{i_file}.dip_include);
+        for k = 1:numel(coil_list)
+            coil = coil_list(k);
             quiver3(hpi2{i_file}.dip_pos_tf(coil,1),hpi2{i_file}.dip_pos_tf(coil,2),hpi2{i_file}.dip_pos_tf(coil,3),hpi2{i_file}.dip_ori_tf(coil,1),hpi2{i_file}.dip_ori_tf(coil,2),hpi2{i_file}.dip_ori_tf(coil,3),'*','Color',colors(coil,:),'DisplayName',['hpi' hpi_labels2{coil}((end-2):end) ' (GOF=' num2str((hpi2{i_file}.dip_gof(coil))*100,'%.2f') '%)'],'LineWidth',2);
         end
         scatter3(hpi_polhemus(:,1),hpi_polhemus(:,2),hpi_polhemus(:,3),'r','DisplayName','polhemus'); 
