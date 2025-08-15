@@ -200,7 +200,7 @@ for i_sub = 1:length(subject_list)
         ft_hastoolbox('mne',1);  
         if exist(fullfile(save_path, [params.peaks{1}.label '_dipoles.mat']),'file') && overwrite.dip==false
             disp(['Not overwriting dipole source reconstruction for ' params.sub]);
-        elseif exist(fullfile(save_path, [params.sub '_opm_timelockedT.mat']),'file')
+        elseif exist(fullfile(save_path, [params.sub '_opm_timelockedT.mat']),'file') && exist(fullfile(save_path_mri, 'headmodels.mat'),'file')
             headmodel = load(fullfile(save_path_mri, 'headmodels.mat')).headmodels.headmodel_meg;
             mri_resliced = load(fullfile(save_path_mri, 'mri_resliced.mat')).mri_resliced;
             opm_timelockedT = load(fullfile(save_path, [params.sub '_opm_timelockedT.mat'])).opm_timelockedT;
@@ -217,7 +217,7 @@ for i_sub = 1:length(subject_list)
         ft_hastoolbox('mne',1);
         if exist(fullfile(save_path, 'opm_mne_peaks.mat'),'file') && overwrite.mne==false
             disp(['Not overwriting MNE source reconstruction for ' params.sub]);
-        elseif exist(fullfile(save_path, [params.sub '_opm_timelockedT.mat']),'file') 
+        elseif exist(fullfile(save_path, [params.sub '_opm_timelockedT.mat']),'file') && exist(fullfile(save_path_mri, 'headmodels.mat'),'file') 
             clear headmodel sourcemodel sourcemodel_inflated
             sourcemodel = load(fullfile(save_path, [params.sub '_sourcemodel'])).sourcemodel;
             sourcemodel_inflated = load(fullfile(save_path, [params.sub '_sourcemodel_inflated'])).sourcemodel_inflated;
@@ -240,7 +240,7 @@ for i_sub = 1:length(subject_list)
     end
 end
 
-save(fullfile(paths.base_save_path, 'group_results.mat'), 'grp_tag_opm','grp_SNR_opm','grp_pp_opm');
+% save(fullfile(paths.base_save_path, 'group_results.mat'), 'grp_tag_opm','grp_SNR_opm','grp_pp_opm');
 
 %% clear and close all, then exit to free memory
 close all
