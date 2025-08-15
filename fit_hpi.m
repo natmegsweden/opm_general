@@ -120,15 +120,15 @@ for i_file = 1:length(hpi_files)
     %         h = figure; ft_topoplotER(cfg,timelocked); colorbar
     %         saveas(h, fullfile(save_path, 'figs', ['hpi_topo_coil-' num2str(coil) '.jpg']))
     %         close
-        disp(['Max amp: ' num2str(max(abs(timelocked.avg(find(contains(timelocked.label,'bz'))))))])
+        disp(['Max amp: ' num2str(max(abs(timelocked.avg(find(contains(raw.hdr.orig.ch_names,'bz'))))))])
 
-        if any(abs(timelocked.avg(find(contains(timelocked.label,'bz')))) > 1e-3)
+        if any(abs(timelocked.avg(find(contains(raw.hdr.orig.ch_names,'bz')))) > 1e-3)
             %% Dipole fit
             cfg = [];
             cfg.method = 'infinite';
             headmodel = ft_prepare_headmodel(cfg);
             
-            opm_chs = find(contains(timelocked.label,'bz'));
+            opm_chs = find(contains(raw.hdr.orig.ch_names,'bz'));
             [~, i_maxchan] = max(abs(timelocked.avg(opm_chs,:)));
             [X,Y,Z] = meshgrid(-3:0.2:3, ...
                 -3:0.2:0.3, ...
@@ -168,7 +168,7 @@ for i_file = 1:length(hpi_files)
             end
             
         else
-            disp(['Looks like no coil found. Max amp: ' num2str(max(timelocked.avg(find(contains(timelocked.label,'bz')))))])
+            disp(['Looks like no coil found. Max amp: ' num2str(max(timelocked.avg(find(contains(raw.hdr.orig.ch_names,'bz')))))])
         end
     end
 

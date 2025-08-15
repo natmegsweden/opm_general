@@ -11,11 +11,12 @@ raw_path = fullfile(paths.base_data_path, 'sub-002', 'ses-02');
 
 hpi_path = fullfile(raw_path,'meg');
 i_file = 1;
-hpi_files = dir(fullfile(hpi_path,'*HPIafter*.fif'));
+hpi_files = dir(fullfile(hpi_path,'*HPIbefore*.fif'));
 
 hpi = cell(length(hpi_files),1);
 
-
+addpath(fullfile(pwd,'../fieldtrip')) % Fieldtrip path
+ft_defaults
 
 params.paradigm = 'AudOdd';
 params.include_chs = load(fullfile(save_path, [params.paradigm '_include_chs.mat'])).include_chs;
@@ -129,15 +130,15 @@ for coil = 1:length(hpi_chs)
 %         h = figure; ft_topoplotER(cfg,timelocked); colorbar
 %         saveas(h, fullfile(save_path, 'figs', ['hpi_topo_coil-' num2str(coil) '.jpg']))
 %         close
-    disp(['Max amp: ' num2str(max(abs(timelocked.avg(find(contains(timelocked.label,'bz'))))))])
+    disp(['Max amp: ' num2str(max(abs(timelocked.avg(find(contains(raw.hdr.orig.ch_names,'bz'))))))])
 
-    if any(abs(timelocked.avg(find(contains(timelocked.label,'bz')))) > 1e-13)
+    if any(abs(timelocked.avg(find(contains(raw.hdr.orig.ch_names,'bz')))) > 1e-13)
         %% Dipole fit
         cfg = [];
         cfg.method = 'infinite';
         headmodel = ft_prepare_headmodel(cfg);
         
-        opm_chs = find(contains(timelocked.label,'bz'));
+        opm_chs = find(contains(raw.hdr.orig.ch_names,'bz'));
         [~, i_maxchan] = max(abs(timelocked.avg(opm_chs,:)));
         [X,Y,Z] = meshgrid(-3:0.2:3, ...
             -3:0.2:0.3, ...
@@ -176,7 +177,7 @@ for coil = 1:length(hpi_chs)
         end
         
     else
-        disp(['Looks like no coil found. Max amp: ' num2str(max(timelocked.avg(find(contains(timelocked.label,'bz')))))])
+        disp(['Looks like no coil found. Max amp: ' num2str(max(timelocked.avg(find(contains(raw.hdr.orig.ch_names,'bz')))))])
     end
 end
 
@@ -222,7 +223,7 @@ try
     colors = [[0.8500 0.3250 0.0980]; [0.9290 0.6940 0.1250]; [0.4940 0.1840 0.5560]; [0.4660 0.6740 0.1880]; [0.6350 0.0780 0.1840]];
     
     h = figure;
-    ft_plot_sens(epoT.grad,'unit','cm','DisplayName','senspos'); 
+    ft_plot_sens(epo.grad,'unit','cm','DisplayName','senspos'); 
     hold on 
     for coil = find(hpi2{i_file}.dip_include)'
         quiver3(hpi2{i_file}.dip_pos_tf(coil,1),hpi2{i_file}.dip_pos_tf(coil,2),hpi2{i_file}.dip_pos_tf(coil,3),hpi2{i_file}.dip_ori_tf(coil,1),hpi2{i_file}.dip_ori_tf(coil,2),hpi2{i_file}.dip_ori_tf(coil,3),'*','Color',colors(coil,:),'DisplayName',['hpi' hpi_labels2{coil}((end-2):end) ' (GOF=' num2str((hpi2{i_file}.dip_gof(coil))*100,'%.2f') '%)'],'LineWidth',2);
