@@ -30,7 +30,7 @@ i_paradigm = 1;
 
 params.sub = ['sub-' num2str(subject_list(i_sub),'%03d')];
 disp(params.sub)
-disp(natmeg_ids(i_sub))
+
 
 %%
 save_path = fullfile(paths.base_save_path, params.sub);  
@@ -39,9 +39,11 @@ if ~exist(save_path, 'dir')
 end
 
 % find sessions for subject
-sessions = subsessions(subsessions.new_subject_id==subsessions.new_subject_id(i_sub),:).new_session_id;
-dates = subsessions(subsessions.new_subject_id==subsessions.new_subject_id(i_sub),:).old_session_id;
-natmeg_id = unique(subsessions(subsessions.new_subject_id==subsessions.new_subject_id(i_sub),:).old_subject_id);
+sessions = subsessions(subsessions.new_subject_id==subject_list(i_sub),:).new_session_id;
+dates = subsessions(subsessions.new_subject_id==subject_list(i_sub),:).old_session_id;
+natmeg_id = unique(subsessions(subsessions.new_subject_id==subject_list(i_sub),:).old_subject_id);
+
+disp(natmeg_id)
 
 if length(natmeg_id)>1
     error('Multiple natmeg ids for subject %s', params.sub)
@@ -56,8 +58,8 @@ raw_path = fullfile(paths.base_data_path, params.sub, params.ses);
 save_path = fullfile(paths.base_save_path, params.sub, params.ses);
 
 % temporarily get auxilary data from raw instead of bids folder and also read OPM data from raw folder
-tmp_eeg_raw_path = fullfile('~/../../projects/capsi/raw/squid',['NatMEG_' num2str(natmeg_ids(i_sub))], num2str(dates(i_ses)),'meg');
-tmp_opm_raw_path = fullfile('~/../../projects/capsi/raw/opm',['sub-' num2str(natmeg_ids(i_sub))]);
+tmp_eeg_raw_path = fullfile('~/../../projects/capsi/raw/squid',['NatMEG_' num2str(natmeg_id)], num2str(dates(i_ses)),'meg');
+tmp_opm_raw_path = fullfile('~/../../projects/capsi/raw/opm',['sub-' num2str(natmeg_id)]);
 opm_files = [];
 % search for AudOdd data, might be split
 tmp = dir(fullfile(raw_path, 'meg',['*' paradigm.paradigms{i_paradigm} '_acq-hedscan' '*' '_meg.fif']));
