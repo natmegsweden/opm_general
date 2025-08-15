@@ -16,7 +16,7 @@ cfg = [];
 cfg.channel = '*bz*';
 data = ft_selectdata(cfg, data);
 
-chs = find(contains(data.label,'_bz*'));
+chs = find(contains(data.label,'_bz'));
 
 %% Find channels with flat segments or high std
 cfg = [];
