@@ -33,7 +33,6 @@ squid = false;
 %% Subjects + dates
 subsessions = readtable(fullfile(pwd, '../completed_meg_sessions_long_DATA_2025-07-23.csv'), 'Delimiter',',');
 subject_list = unique(subsessions.new_subject_id);
-natmeg_ids = unique(subsessions.old_subject_id);
 
 if ~length(subject_list)==length(natmeg_ids)
     error('Mismatch between new and old subject IDs')
@@ -44,7 +43,12 @@ for i_sub = 1:length(subject_list)
     % zeropad to three zeros
     params.sub = ['sub-' num2str(subject_list(i_sub),'%03d')];
     disp(params.sub)
-    disp(natmeg_ids(i_sub))
+    natmeg_id = unique(subsessions(subsessions.new_subject_id==subsessions.new_subject_id(i_sub),:).old_subject_id);
+
+    if length(natmeg_id)>1
+        error('Multiple natmeg ids for subject %s', params.sub)
+    end
+    disp(natmeg_id)
 
     % check if subject is in skip list
     if ismember(params.sub, skip.subjects)
@@ -80,7 +84,7 @@ for i_sub = 1:length(subject_list)
         save_path = fullfile(paths.base_save_path, params.sub, params.ses);
 
         % temporarily get auxilary data from raw instead of bids folder
-        tmp_eeg_raw_path = fullfile('~/../../projects/capsi/raw/squid',['NatMEG_' num2str(natmeg_ids(i_sub))], num2str(dates(i_ses)),'meg');
+        tmp_eeg_raw_path = fullfile('~/../../projects/capsi/raw/squid',['NatMEG_' num2str(natmeg_id)], num2str(dates(i_ses)),'meg');
         if ~exist(save_path, 'dir')
            mkdir(save_path)
         end
