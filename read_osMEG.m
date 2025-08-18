@@ -12,14 +12,17 @@ function [data] = read_osMEG(opm_file, aux_file, save_path, params)
 % since OPM data is sometimes split into multiple files, this function
 % can handle opm_file being a cell array of file paths or a single file path. 
 
+num_files = numel(opm_file);
+
 % test if only one filename in opm_file, then class = char
 if isa(opm_file, "char")
     if ~exist(opm_file,'file')
         error(['Did not find OPM file: ' opm_file])
     end
-% else multiple files 
+    num_files = 1; % set num_files to 1
+% else m
 else
-    for i = 1:numel(opm_file)
+    for i = 1:num_files
         if ~exist(opm_file{i},'file')
             error(['Did not find OPM file: ' opm_file{i}])
         end
@@ -45,7 +48,11 @@ cfg.coilaccuracy    = 0;
 opm_raw = ft_preprocessing(cfg);
 
 % Correct channel names from header and remove -sXX sensor names to match grad structure 
-opm_raw.label = opm_raw.hdr.orig{1}.orig.ch_names';
+if num_files ==1
+    opm_raw.label = opm_raw.hdr.orig.ch_names';
+else
+    opm_raw.label = opm_raw.hdr.orig{1}.orig.ch_names';
+end
 opm_raw.label = regexprep(opm_raw.label, '-s\d+$', '');
 
 % Find trigger channel 

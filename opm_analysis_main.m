@@ -84,8 +84,8 @@ for i_sub = 1:length(subject_list)
         if ~exist(fullfile(save_path,'figs'), 'dir')
            mkdir(fullfile(save_path,'figs'))
         end
+        opm_files = [];
         for i_paradigm = 1:length(paradigm.paradigms)
-            opm_files = [];
             % search for AudOdd data, might be split
             tmp = dir(fullfile(raw_path, 'meg',['*' paradigm.paradigms{i_paradigm} '_acq-hedscan' '*' '_meg.fif']));
             if isempty(tmp)
@@ -175,68 +175,70 @@ for i_sub = 1:length(subject_list)
                 opm_timelockedT{i}.grad.chanori = (opm_trans.Rotation'*opm_timelockedT{i}.grad.chanori')';
                 opm_timelockedT{i}.grad.coilori = (opm_trans.Rotation'*opm_timelockedT{i}.grad.coilori')';
             end
-    
-            % Plot source and head models
-            clear headmodels sourcemodel
-            headmodels = load(fullfile(save_path,'headmodels.mat')).headmodels;
-            sourcemodel = load(fullfile(save_path, 'sourcemodel.mat')).sourcemodel;
-        
-            h=figure; 
-            ft_plot_mesh(sourcemodel, 'maskstyle', 'opacity', 'facecolor', 'black', 'facealpha', 0.25, 'edgecolor', 'red',   'edgeopacity', 0.5,'unit','cm');
-            hold on; 
-            ft_plot_headmodel(headmodels.headmodel_meg, 'facealpha', 0.25, 'edgealpha', 0.25)
-            ft_plot_sens(opm_timelockedT.grad,'unit','cm')
-            hold off;
-            title('OPM-MEG')
-            view([-140 10])
-            saveas(h, fullfile(save_path, 'figs', 'opm_layout.jpg'))
-            close all
             
-            save(fullfile(save_path, [params.sub '_opm_timelockedT']), 'opm_timelockedT', '-v7.3');
-            clear timelocked sourcemodel headmodels opm_trans
+            if exist(fullfile(save_path,'headmodels.mat'), 'file')
+                % Plot source and head models
+                clear headmodels sourcemodel
+                headmodels = load(fullfile(save_path,'headmodels.mat')).headmodels;
+                sourcemodel = load(fullfile(save_path, 'sourcemodel.mat')).sourcemodel;
+            
+                h=figure; 
+                ft_plot_mesh(sourcemodel, 'maskstyle', 'opacity', 'facecolor', 'black', 'facealpha', 0.25, 'edgecolor', 'red',   'edgeopacity', 0.5,'unit','cm');
+                hold on; 
+                ft_plot_headmodel(headmodels.headmodel_meg, 'facealpha', 0.25, 'edgealpha', 0.25)
+                ft_plot_sens(opm_timelockedT.grad,'unit','cm')
+                hold off;
+                title('OPM-MEG')
+                view([-140 10])
+                saveas(h, fullfile(save_path, 'figs', 'opm_layout.jpg'))
+                close all
+                
+                save(fullfile(save_path, [params.sub '_opm_timelockedT']), 'opm_timelockedT', '-v7.3');
+                clear timelocked sourcemodel headmodels opm_trans
+            end
         end
 
         %% Dipole fits
-        ft_hastoolbox('mne',1);  
-        if exist(fullfile(save_path, [params.peaks{1}.label '_dipoles.mat']),'file') && overwrite.dip==false
-            disp(['Not overwriting dipole source reconstruction for ' params.sub]);
-        elseif exist(fullfile(save_path, [params.sub '_opm_timelockedT.mat']),'file') && exist(fullfile(save_path_mri, 'headmodels.mat'),'file')
-            headmodel = load(fullfile(save_path_mri, 'headmodels.mat')).headmodels.headmodel_meg;
-            mri_resliced = load(fullfile(save_path_mri, 'mri_resliced.mat')).mri_resliced;
-            opm_timelockedT = load(fullfile(save_path, [params.sub '_opm_timelockedT.mat'])).opm_timelockedT;
+        %ft_hastoolbox('mne',1);  
+        %if exist(fullfile(save_path, [params.peaks{1}.label '_dipoles.mat']),'file') && overwrite.dip==false
+        %    disp(['Not overwriting dipole source reconstruction for ' params.sub]);
+        %elseif exist(fullfile(save_path, [params.sub '_opm_timelockedT.mat']),'file') && exist(fullfile(save_path_mri, 'headmodels.mat'),'file')
+            %headmodel = load(fullfile(save_path_mri, 'headmodels.mat')).headmodels.headmodel_meg;
+            %mri_resliced = load(fullfile(save_path_mri, 'mri_resliced.mat')).mri_resliced;
+            %opm_timelockedT = load(fullfile(save_path, [params.sub '_opm_timelockedT.mat'])).opm_timelockedT;
             
-            for i_peak = 1:length(params.peaks)
-                peak_opm = load(fullfile(save_path, [params.sub '_opm_' params.peaks{i_peak}.label])).peak; 
-                fit_dipoles(save_path, opm_timelockedT, headmodel, mri_resliced, params);
-                clear peak_opm
-            end
-            clear squid_timelocked opm_timelockedT
-        end
+            %for i_peak = 1:length(params.peaks)
+                % peak_opm = load(fullfile(save_path, [params.sub '_opm_' params.peaks{i_peak}.label])).peak; 
+                % fit_dipoles(save_path, opm_timelockedT, headmodel, mri_resliced, params);
+                % clear peak_opm
+            %end
+            %clear squid_timelocked opm_timelockedT
+        %end
         
         %% MNE
-        ft_hastoolbox('mne',1);
-        if exist(fullfile(save_path, 'opm_mne_peaks.mat'),'file') && overwrite.mne==false
-            disp(['Not overwriting MNE source reconstruction for ' params.sub]);
-        elseif exist(fullfile(save_path, [params.sub '_opm_timelockedT.mat']),'file') && exist(fullfile(save_path_mri, 'headmodels.mat'),'file') 
-            clear headmodel sourcemodel sourcemodel_inflated
-            sourcemodel = load(fullfile(save_path, [params.sub '_sourcemodel'])).sourcemodel;
-            sourcemodel_inflated = load(fullfile(save_path, [params.sub '_sourcemodel_inflated'])).sourcemodel_inflated;
-            headmodel = load(fullfile(save_path,'headmodels.mat')).headmodels.headmodel_meg;
+        %ft_hastoolbox('mne',1);
+        %if exist(fullfile(save_path, 'opm_mne_peaks.mat'),'file') && overwrite.mne==false
+            %disp(['Not overwriting MNE source reconstruction for ' params.sub]);
+        %elseif exist(fullfile(save_path, [params.sub '_opm_timelockedT.mat']),'file') && exist(fullfile(save_path_mri, 'headmodels.mat'),'file') 
+            %clear headmodel sourcemodel sourcemodel_inflated
+            %sourcemodel = load(fullfile(save_path, [params.sub '_sourcemodel'])).sourcemodel;
+            %sourcemodel_inflated = load(fullfile(save_path, [params.sub '_sourcemodel_inflated'])).sourcemodel_inflated;
+            %headmodel = load(fullfile(save_path,'headmodels.mat')).headmodels.headmodel_meg;
     
             %% OPM
-            clear opm_timelockedT
-            opm_timelockedT = load(fullfile(save_path, [params.sub '_opm_timelockedT.mat'])).opm_timelockedT;
+            %clear opm_timelockedT
+            %opm_timelockedT = load(fullfile(save_path, [params.sub '_opm_timelockedT.mat'])).opm_timelockedT;
             
-            for i = 1:length(opm_timelockedT)
-                opm_timelockedT{i}.cov_RS = load(fullfile(save_path, [params.sub '_resting_state_opm.mat'])).opm_RS_cov;
-                if exist(fullfile(save_path, [params.sub '_ER_opm.mat']),'file')
-                    opm_timelockedT{i}.cov_ER = load(fullfile(save_path, [params.sub '_ER_opm.mat'])).opm_ER_cov;
-                end
-            end
+            %for i = 1:length(opm_timelockedT)
+                %opm_timelockedT{i}.cov_RS = load(fullfile(save_path, [params.sub '_resting_state_opm.mat'])).opm_RS_cov;
+                %if exist(fullfile(save_path, [params.sub '_ER_opm.mat']),'file')
+                    %opm_timelockedT{i}.cov_ER = load(fullfile(save_path, [params.sub '_ER_opm.mat'])).opm_ER_cov;
+                %end
+            %end
             
             % MNE fit
-            fit_mne(save_path, opm_timelockedT, headmodel, sourcemodel, sourcemodel_inflated, params);
-        end
+            %fit_mne(save_path, opm_timelockedT, headmodel, sourcemodel, sourcemodel_inflated, params);
+        %end
     end
 end
 
