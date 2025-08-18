@@ -38,6 +38,11 @@ for i_trigger = 1:length(params.trigger_codes)
         trls = 1:length(data.trial);
     end
 
+    if ~ismember(params.trigger_codes{i_trigger},  unique(data.trialinfo))
+        warning(['Trigger code ' num2str(params.trigger_codes{i_trigger}) ' not found in data.trialinfo']);
+        continue
+    end
+
     % Average trials
     cfg = [];
     cfg.covariance          = 'yes';
