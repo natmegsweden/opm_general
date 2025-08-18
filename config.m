@@ -100,8 +100,8 @@ end
 
 function paradigm = get_paradigm()
     paradigm.paradigms = {'AudOdd'}; % Paradigms to analyze for all participants and sessions
-    paradigm.trigger_codes = {3 5 11 13}; % Trigger values to timelock
-    paradigm.trigger_labels = {'low_nogo', 'low_go', 'high_nogo', 'high_go'}; % Labels corresponding to the trigger values    
+    paradigm.trigger_codes = {3 5 11 13 1}; % Trigger values to timelock
+    paradigm.trigger_labels = {'low_nogo', 'low_go', 'high_nogo', 'high_go', 'standard'}; % Labels corresponding to the trigger values    
 end
 
 function paths = get_paths()
