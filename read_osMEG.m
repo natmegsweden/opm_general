@@ -12,17 +12,17 @@ function [data] = read_osMEG(opm_file, aux_file, save_path, params)
 % since OPM data is sometimes split into multiple files, this function
 % can handle opm_file being a cell array of file paths or a single file path. 
 
-num_files = numel(opm_file);
-
-if num_files > 1
-    for i = 1:num_files
+% test if only one filename in opm_file, then class = char
+if isa(opm_file, "char")
+    if ~exist(opm_file,'file')
+        error(['Did not find OPM file: ' opm_file])
+    end
+% else multiple files 
+else
+    for i = 1:numel(opm_file)
         if ~exist(opm_file{i},'file')
             error(['Did not find OPM file: ' opm_file{i}])
         end
-    end
-else
-    if ~exist(opm_file,'file')
-        error(['Did not find OPM file: ' opm_file])
     end
 end
 
