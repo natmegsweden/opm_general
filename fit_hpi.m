@@ -58,8 +58,9 @@ for i_file = 1:length(hpi_files)
     plot(raw.trial{1}(hpi_chs,:)')
     title('sanity check: OPM HPI channels');
 
-    % Create filename with padded index (e.g., plot_001.png)
-    filename = sprintf('plot_hpis.png');
+    % Create filename with HPI before/after
+    hpi_measuremnet = extractBetween(hpi_files(i_file).name, 'task-', '_acq');
+    filename = fullfile(save_path, 'figs',['hpi_in_' hpi_measuremnet{1} '.png']);
 
     % Save the figure
     saveas(fig, filename)
