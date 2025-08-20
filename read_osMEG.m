@@ -58,32 +58,6 @@ opm_raw.label = regexprep(opm_raw.label, '-s\d+$', '');
 % Find trigger channel 
 i_trig_opm = find(contains(opm_raw.label,'di'));
 
-% hacky solution for now:
-
-%{
- for i = 1:length(opm_raw.label)
-    % check for channel that is 0 over first 10 samples but not the first 20000 samples to avoid picking HPI channels 
-    if sum(opm_raw.trial{1}(i,1:10)) == 0 & sum(opm_raw.trial{1}(i,1:200000))
-        disp(i)
-        % set trigger opm to value
-        i_trig_opm = i
-        % Create plot
-        fig = figure('Visible', 'off');  % Don’t show plot (faster)
-        plot(opm_raw.trial{1}(i,:));
-        title(sprintf('Sensor %d', i));
-
-        % Create filename with padded index (e.g., plot_001.png)
-        filename = sprintf('plot_%03d.png', i);
-
-        % Save the figure
-        saveas(fig, filename);
-
-        % Close the figure to save memory
-        close(fig);
-    end
-end 
-%}
-
 trig = opm_raw.trial{1}(i_trig_opm,:)>0.5;
 trig = [false trig(2:end)&~trig(1:end-1)];
 trl_opm(:,1) = find(trig)-(params.pre+params.pad)*opm_raw.fsample;
@@ -261,6 +235,9 @@ for i = 1:length(data.trial)
     data.trial{i} = vertcat(data.trial{i}, ExG.trial{i}); 
 end
 
+%% save original data.sampleinfo to get indx of rejected samples later
+origsampleinfo = data.sampleinfo;
+
 %% Reject jump trials
 cfg = [];
 cfg.channel = {'*bz'};
@@ -296,9 +273,9 @@ data = ft_selectdata(cfg, data);
 data.grad = ft_convert_units(data.grad,'cm');
 
 %% Save bad trials
-[~,idx]=ismember(data.sampleinfo,badtrl_jump,'rows');
+[~,idx]=ismember(origsampleinfo,badtrl_jump,'rows');
 badtrl_opm_jump = find(idx);
-[~,idx]=ismember(data.sampleinfo,badtrl_std,'rows');
+[~,idx]=ismember(origsampleinfo,badtrl_std,'rows');
 badtrl_opm_std = find(idx);
 save(fullfile(save_path, [params.paradigm '_opm_badtrls']), ...
     'badtrl_opm_jump', ...

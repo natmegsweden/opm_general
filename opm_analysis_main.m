@@ -94,7 +94,7 @@ for i_sub = 1:length(subject_list)
             else
                 %disp(tmp)
                 % handle split files
-                 if numel(tmp) > 1
+                if numel(tmp) > 1
                     % Return a cell array of full paths
                     opm_files{i_paradigm} = arrayfun(@(f) fullfile(f.folder, f.name), tmp, 'UniformOutput', false);
                 else
