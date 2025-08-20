@@ -170,10 +170,14 @@ for i_sub = 1:length(subject_list)
         
             opm_timelockedT = load(fullfile(save_path, [params.paradigm '_timelocked.mat'])).timelocked;
             for i = 1:length(params.trigger_labels)
-                opm_timelockedT{i}.grad.chanpos = opm_trans.transformPointsForward(opm_timelockedT{i}.grad.chanpos);
-                opm_timelockedT{i}.grad.coilpos = opm_trans.transformPointsForward(opm_timelockedT{i}.grad.coilpos);
-                opm_timelockedT{i}.grad.chanori = (opm_trans.Rotation'*opm_timelockedT{i}.grad.chanori')';
-                opm_timelockedT{i}.grad.coilori = (opm_trans.Rotation'*opm_timelockedT{i}.grad.coilori')';
+                try
+                    opm_timelockedT{i}.grad.chanpos = opm_trans.transformPointsForward(opm_timelockedT{i}.grad.chanpos);
+                    opm_timelockedT{i}.grad.coilpos = opm_trans.transformPointsForward(opm_timelockedT{i}.grad.coilpos);
+                    opm_timelockedT{i}.grad.chanori = (opm_trans.Rotation'*opm_timelockedT{i}.grad.chanori')';
+                    opm_timelockedT{i}.grad.coilori = (opm_trans.Rotation'*opm_timelockedT{i}.grad.coilori')';
+                catch
+                    disp(['Error transforming points for trigger ' params.trigger_labels{i}]);
+                end
             end
             
             if exist(fullfile(save_path,'headmodels.mat'), 'file')
