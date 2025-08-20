@@ -230,7 +230,7 @@ for i_file = 1:length(hpi_files)
         hold off
         title(['HPI fits (mean dist = ' num2str(dist*10) ' mm)'])
         legend('Location','eastoutside')
-        saveas(h, fullfile(save_path, ['hpi_fits-' num2str(i_file) '.jpg']))
+        saveas(h, fullfile(save_path,'figs', ['hpi_fits-' hpi_measuremnet{1} '.jpg']))
     catch
         warning(['PCregister failed on hpi-file: ' hpi_files(i_file).name ])
         hpi2{i}.dip_gof = 0;
