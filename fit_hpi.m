@@ -185,7 +185,19 @@ for i_file = 1:length(hpi_files)
     %%
     % Adjust order
     ft_hastoolbox('mne',1);
-    headshape = ft_read_headshape(aux_file);
+    try
+        headshape = ft_read_headshape(aux_file);
+    catch
+        warning(['Could not read headshape file: ' aux_file])
+        disp('trying to load MEG file instead')
+        try
+            megfile = replace(aux_file, "EEG", "MEG");
+            headshape = ft_read_headshape(megfile);
+        catch
+            warning(['Could not read headshape file: ' megfile])
+            continue
+        end
+    end
     hpi_polhemus = headshape.pos(find(contains(headshape.label,'hpi')),:);
     [~, i_min] = min(pdist2(hpi{i_file}.dip_pos(hpi{i_file}.dip_include,1:2),hpi_polhemus(:,1:2)),[],2);
 
@@ -196,7 +208,19 @@ for i_file = 1:length(hpi_files)
     hpi_labels2(i_min) = hpi_labels(hpi{i_file}.dip_include);
 
     ft_hastoolbox('mne',1);
-    headshape = ft_read_headshape(aux_file);
+    try
+        headshape = ft_read_headshape(aux_file);
+    catch
+        warning(['Could not read headshape file: ' aux_file])
+        disp('trying to load MEG file instead')
+        try
+            megfile = replace(aux_file, "EEG", "MEG");
+            headshape = ft_read_headshape(megfile);
+        catch
+            warning(['Could not read headshape file: ' megfile])
+            continue
+        end
+    end
     hpi_polhemus = headshape.pos(find(contains(headshape.label,'hpi')),:);
     fixed = pointCloud(hpi_polhemus(hpi2{i_file}.dip_include,:));
     moving = pointCloud(hpi2{i_file}.dip_pos(hpi2{i_file}.dip_include,:));
