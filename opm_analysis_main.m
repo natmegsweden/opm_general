@@ -160,7 +160,7 @@ for i_sub = 1:length(subject_list)
             mkdir(save_path_mri)
         end
         
-        if exist(fullfile(save_path_mri, 'opm_trans.mat'),'file') && overwrite.coreg==false
+        if exist(fullfile(save_path, 'opm_trans.mat'),'file') && overwrite.coreg==false
             disp(['Not overwriting OPM transform for ' params.sub]);
         else
             ft_hastoolbox('mne', 1);
