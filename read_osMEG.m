@@ -1,4 +1,4 @@
-function [data] = read_osMEG(opm_file, aux_file, save_path, params)
+function [data_cleaned] = read_osMEG(opm_file, aux_file, save_path, params)
 %prprocess_osMEG Read on-scalp MEG data for benchmarking
 % recordings and combine with auxiliary TRIUX data/EEG. 
 % Requires the following arguments:
@@ -85,6 +85,26 @@ if ~opm_only
     cfg.demean          = 'yes';
     cfg.baselinewindow  = [-params.pre 0];
     aux_epo = ft_preprocessing(cfg,aux_epo);
+elseif any(contains(opm_raw.label,'ai173'))
+    ecg_ch = find(contains(opm_raw.label,'ai173'));
+    eog1_ch = find(contains(opm_raw.label,'ai174'));
+    eog2_ch = find(contains(opm_raw.label,'ai175'));
+    disp('Changing channel types for ECG/EOG')
+    if ~isempty(ecg_ch)
+        opm_raw.label{ecg_ch} = 'ECG';
+        opm_raw.hdr.label{ecg_ch} = 'ECG';
+        opm_raw.hdr.chantype{ecg_ch} = 'ecg';
+    end
+    if ~isempty(eog1_ch)
+        opm_raw.label{eog1_ch} = 'EOG001';
+        opm_raw.hdr.label{eog1_ch} = 'EOG1';
+        opm_raw.hdr.chantype{eog1_ch} = 'eog';
+    end
+    if ~isempty(eog2_ch)
+        opm_raw.label{eog2_ch} = 'EOG002';
+        opm_raw.hdr.label{eog2_ch} = 'EOG2';
+        opm_raw.hdr.chantype{eog2_ch} = 'eog';
+    end
 end
 
 %% OPM data filter & epoch
@@ -169,7 +189,7 @@ if params.do_hfc
     cfg.channel = '*bz';
     cfg.order = params.hfc_order;
     cfg.residualcheck = 'no';
-    data = ft_denoise_hfc(cfg, data);
+    data_cleaned = ft_denoise_hfc(cfg, data);
 elseif params.do_amm
     cfg = [];
     cfg.channel = '*bz';
@@ -179,20 +199,20 @@ elseif params.do_amm
     cfg.amm.order_in = params.amm_in;
     cfg.amm.order_out = params.amm_out;
     cfg.amm.thr = params.amm_thr;
-    data = ft_denoise_amm(cfg, data);
+    data_cleaned = ft_denoise_amm(cfg, data);
 else
-    data = data;
+    data_cleaned = data;
 end
 
 % Recombine with ExG channels
-data.label = vertcat(data.label,ExG.label);
-data.hdr = comb.hdr;
-incl = ismember(comb.hdr.label,data.label);
-data.hdr.label = comb.hdr.label(incl);
-data.hdr.chantype = comb.hdr.chantype(incl);
-data.hdr.chanunit = comb.hdr.chanunit (incl);
-for i = 1:length(data.trial)
-    data.trial{i} = vertcat(data.trial{i}, ExG.trial{i}); 
+data_cleaned.label = vertcat(data_cleaned.label,ExG.label);
+data_cleaned.hdr = data.hdr;
+incl = ismember(data.hdr.label,data_cleaned.label);
+data_cleaned.hdr.label = data.hdr.label(incl);
+data_cleaned.hdr.chantype = data.hdr.chantype(incl);
+data_cleaned.hdr.chanunit = data.hdr.chanunit (incl);
+for i = 1:length(data_cleaned.trial)
+    data_cleaned.trial{i} = vertcat(data_cleaned.trial{i}, ExG.trial{i}); 
 end
 
 %% Reject jump trials
@@ -203,36 +223,36 @@ cfg.preproc.medianfilter  = 'yes';
 cfg.preproc.medianfiltord  = 9;
 cfg.preproc.absdiff       = 'yes';
 cfg.threshold = params.z_threshold;
-[cfg,badtrl_jump] = ft_badsegment(cfg, data);
-data = ft_rejectartifact(cfg,data);
+[cfg,badtrl_jump] = ft_badsegment(cfg, data_cleaned);
+data_cleaned = ft_rejectartifact(cfg,data_cleaned);
 
 %% Reject noisy trials
 cfg = [];
 cfg.channel = {'*bz'};
 cfg.metric = 'std';
 cfg.threshold = params.opm_std_threshold;
-[cfg,badtrl_std] = ft_badsegment(cfg, data);
-data = ft_rejectartifact(cfg,data);
+[cfg,badtrl_std] = ft_badsegment(cfg, data_cleaned);
+data_cleaned = ft_rejectartifact(cfg,data_cleaned);
 
 %% Downsample
 if isfield(params,'ds_freq') && ~isempty(params.ds_freq) && params.ds_freq~=1000
     cfg = [];
     cfg.resamplefs = params.ds_freq;
-    data = ft_resampledata(cfg, data);
+    data_cleaned = ft_resampledata(cfg, data_cleaned);
 end
 
 %% Remove padding
 cfg = [];
 cfg.latency = [-params.pre params.post];
-data = ft_selectdata(cfg, data); 
+data_cleaned = ft_selectdata(cfg, data_cleaned); 
 
 %% Convert to sensor definitions to cm
-data.grad = ft_convert_units(data.grad,'cm');
+data_cleaned.grad = ft_convert_units(data_cleaned.grad,'cm');
 
 %% Save bad trials
-[~,idx]=ismember(opm_cleaned.sampleinfo,badtrl_jump,'rows');
+[~,idx]=ismember(data_cleaned.sampleinfo,badtrl_jump,'rows');
 badtrl_opm_jump = find(idx);
-[~,idx]=ismember(opm_cleaned.sampleinfo,badtrl_std,'rows');
+[~,idx]=ismember(data_cleaned.sampleinfo,badtrl_std,'rows');
 badtrl_opm_std = find(idx);
 save(fullfile(save_path, [params.sub '_opm_badtrls']), ...
     'badtrl_opm_jump', ...

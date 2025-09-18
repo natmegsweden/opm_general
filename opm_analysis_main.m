@@ -14,8 +14,8 @@ if contains(pwd,'/home/chrpfe')
 else
     server = false;
     % Laptop:
-    base_data_path = '/Volumes/dataarchvie/CHOP/MEG';
-    base_save_path = '/Users/christophpfeiffer/data_local/CHOP';
+    base_data_path = '/Volumes/dataarchvie/kimagine';
+    base_save_path = '/Users/christophpfeiffer/data_local/kimagine';
     base_matlab_path = '/Users/christophpfeiffer/Dropbox/Mac/Documents/MATLAB';
     project_scripts_path = '/Users/christophpfeiffer/opm_general';
 end
@@ -41,25 +41,27 @@ overwrite.coreg = false;
 overwrite.dipole = false;
 overwrite.mne = false;
 
-
 %% Params
 params = [];
-params.pre = 0.3; % Trial prestim in seconds
-params.post = 0.1; % Trial poststim in seconds
+params.pre = 0.2; % Trial prestim in seconds
+params.post = 1.; % Trial poststim in seconds
 params.pad = 0.2; % Trial (pre and post) padding in seconds
 params.delay = 0.01; % Stimulus delay in seconds (e.g., 0.01 for eartubes or 0.041 for membranes).
 
 params.filter = [];
 params.filter.hp_freq = 1; % Highpass cutoff frequency
 params.filter.lp_freq = 50; % Lowpass cutoff frequency
-params.filter.notch = sort([50 60 100 120]); % Notch (bandstop) filter frequencies
+params.filter.notch = sort([50 60]); % Notch (bandstop) filter frequencies
 
 params.ds_freq = 1000; % Downsample frequency. If empty or not defined no downsampling will be applied
 
 params.apply_hfc = true; % Apply Homogenous Field Correction
-params.hfc_order = 1; % Order for Homogenous Field Correction: 1..3
+params.hfc_order = 3; % Order for Homogenous Field Correction: 1..3
 
-params.apply_amm = false; % Apply Adaptive Multipole Models
+% Spatiotemporal filter (OPM-MEG only)
+params.do_hfc = true;
+params.hfc_order = 2;
+params.do_amm = false;
 params.amm_in = 12;
 params.amm_out = 2;
 params.amm_thr = 1;
@@ -78,8 +80,8 @@ params.squid_std_threshold = 2.5e-12; % Stddev threshold for badtrial detection
 params.hpi_freq = 33; % HPI coil frequency
 params.hpi_gof = 0.9; % Minimum goodness-of-fit for including coil in hpi analysis
 
-params.trigger_codes = [3 5 9]; % Trigger values to timelock
-params.trigger_labels = {'short', 'middle', 'long'}; % Labels corresponding to the trigger values
+params.trigger_codes = [];%{1 [3 11] [5 13]}; % combined oddball-nogo and oddball-go
+params.trigger_labels = [];%{'std' 'oddNoGo' 'oddGo'};
 
 params.src_density = '8'; % Sourcemodel density ('4', '8' or '32') = approximate number of sources per hemisphere
 params.source_fixedori = true; % use fixed orientation sources (along vertex normals); if false: use three orthogonal sources per location
@@ -87,18 +89,17 @@ params.use_cov = 'resting_state'; % noise cov to use; default= ' ' for prestim, 
 
 params.modality = 'opm';
 params.layout = 'fieldlinebeta2bz_helmet.mat';
-params.chs = '*bz';
+params.chs = {'*by','*bz'};
 
 %% Subjects + dates
 [subjects, sessions] = getSubjectsAndSessions(base_data_path,false);
 
-paradigms = {'varITI'}; % Paradigms to analyze for all participants and sessions
+paradigms = {'AudOdd'}; % Paradigms to analyze for all participants and sessions
 
 if server
     subs_to_run = [find(cellfun(@(x) strcmp(x,'1196'), subjects)) find(cellfun(@(x) strcmp(x,'1206'), subjects)) find(cellfun(@(x) strcmp(x,'1211'), subjects))];
 else
-    %subs_to_run = find(cellfun(@str2num, subjects)>1082)';
-    subs_to_run = find(cellfun(@(x) strcmp(x,'0953'), subjects));
+    subs_to_run = 1:length(subjects);
 end
 ses_cnt = 0;
 
@@ -120,8 +121,9 @@ for i_sub = subs_to_run
         params.ses = ['ses-' num2str(i_ses,'%02d')];
         
         %% Paths
-        raw_path = fullfile(base_data_path, ['NatMEG_' subjects{i_sub}], sessions{i_sub,i_ses});
+        raw_path = fullfile(base_data_path, subjects{i_sub}, sessions{i_sub,i_ses});
         save_path = fullfile(base_save_path, params.sub, params.ses);
+        hpi_path = fullfile(raw_path,'meg');
         if ~exist(save_path, 'dir')
            mkdir(save_path)
         end
@@ -129,17 +131,25 @@ for i_sub = subs_to_run
            mkdir(fullfile(save_path,'figs'))
         end
         for i_paradigm = 1:length(paradigms)
-            if server % on server
-                tmp = dir(fullfile(raw_path,'opm',['*' paradigms{i_paradigm} 'OPM_raw.fif']));
-                opm_files{i_paradigm} = fullfile(tmp.folder,tmp.name); % opm files 
-                squid_files{i_paradigm} = fullfile(raw_path,'meg',[paradigms{i_paradigm} 'MEG_tsss_mc.fif']); % corresponding aux files containing EOG/ECG
-            else % on laptop
-                opm_files{i_paradigm} = fullfile(raw_path,'osmeg',[paradigms{i_paradigm} 'OPM_raw.fif']); % opm files 
-                squid_files{i_paradigm} = fullfile(raw_path,'meg',[paradigms{i_paradigm} 'MEG_proc-tsss+corr98+mc+avgHead_meg.fif']); % corresponding aux files containing EOG/ECG
+            tmp = dir(fullfile(raw_path,'meg',['*' paradigms{i_paradigm} 'OPM_raw.fif']));
+            if ~isempty(tmp)
+                opm_files{i_paradigm} = fullfile(tmp.folder,tmp.name);
+            else
+                opm_files{i_paradigm} = [];
             end
-            aux_files{i_paradigm} = fullfile(raw_path,'meg',[paradigms{i_paradigm} 'EEG.fif']); % corresponding aux files containing EOG/ECG
+            tmp = dir(fullfile(raw_path,'meg',['*' paradigms{i_paradigm} 'EEG.fif']));
+            if ~isempty(tmp)
+                aux_files{i_paradigm} = fullfile(tmp.folder,tmp.name);
+            else
+                aux_files{i_paradigm} = [];
+            end
+            tmp = dir(fullfile(raw_path,'meg',['*' paradigms{i_paradigm} 'MEG_proc-tsss+corr98+mc+avgHead_meg.fif']));
+            if ~isempty(tmp)
+                squid_files{i_paradigm} = fullfile(tmp.folder,tmp.name);
+            else
+                squid_files{i_paradigm} = [];
+            end
         end
-        hpi_path = fullfile(raw_path,'osmeg');
         
         %% Loop over paradigms/tasks
         for i_paradigm = 1:length(paradigms)
@@ -148,7 +158,7 @@ for i_sub = subs_to_run
             %% Read and preproc
             params.modality = 'opm';
             params.layout = 'fieldlinebeta2bz_helmet.mat';
-            params.chs = '*_b*';
+            params.chs = {'*by','*bz'};
             
             if overwrite.preproc == true || ~exist(fullfile(save_path, [params.paradigm '_data_ica.mat']),'file')
                 ft_hastoolbox('mne', 1);
@@ -175,7 +185,8 @@ for i_sub = subs_to_run
                 params.layout = 'fieldlinebeta2bz_helmet.mat';
                 params.chs = '*bz';
                 params.amp_scaler = 1e15;
-                params.amp_label = 'B [fT]';
+                params.amp_label = 'B [fT]'; 
+
                 timelocked = timelock(data_ica, save_path, params);
                 save(fullfile(save_path, [params.paradigm '_timelocked']), 'timelocked', '-v7.3'); 
                 clear timelocked

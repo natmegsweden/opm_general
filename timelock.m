@@ -16,6 +16,13 @@ amp_scaler     = ft_getopt(params, 'amp_scaler', 1); % scaling factor used for f
 
 timelocked = cell(length(params.trigger_codes),1);
 
+if isfield(params,'trigger_codes') && isempty(params.trigger_codes)
+    params.trigger_codes = unique(data.trialinfo);
+    for i = 1:length(params.trigger_codes)
+        params.trigger_labels{i} = num2str(params.trigger_codes(i));
+    end
+end
+
 % Cut off padding
 cfg = [];
 cfg.channel = params.chs;
@@ -47,6 +54,9 @@ for i_trigger = 1:length(params.trigger_codes)
     timelocked{i_trigger}.trigger_code = params.trigger_codes(i_trigger);
     timelocked{i_trigger}.trigger_label = params.trigger_labels(i_trigger);
 
+    %%
+    gfp = std(timelocked{i_trigger}.avg,0,1)*params.amp_scaler;
+    
     %% Plot butterfly
     h = figure;
     left = 0.1;
@@ -64,10 +74,10 @@ for i_trigger = 1:length(params.trigger_codes)
     ylabel(params.amp_label)
     xlim([-params.pre params.post]*1e3);
     title(['Evoked ' params.modality ' - ' params.trigger_labels{i_trigger} ' (n_{trls}=' num2str(length(timelocked{i_trigger}.cfg.trials)) ')'])
-    
+
     % GFP
     ax2 = axes('Position', [left, bottom, width, height_bottom]);
-    plot(timelocked{i_trigger}.time*1e3,std(timelocked{i_trigger}.avg,0,1)*params.amp_scaler,'k')
+    plot(timelocked{i_trigger}.time*1e3,gfp,'k')
     ax2.XTickLabel = [];
     ylabel('GFP')
     xlim([-params.pre params.post]*1e3);
