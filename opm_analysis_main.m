@@ -81,9 +81,9 @@ params.hpi_freq = 33; % HPI coil frequency
 params.hpi_gof = 0.9; % Minimum goodness-of-fit for including coil in hpi analysis
 
 params.trigger_codes = {};%{1 [3 11] [5 13]}; % combined oddball-nogo and oddball-go
-params.trigger_labels = {t;%{'std' 'oddNoGo' 'oddGo'};
+params.trigger_labels = {};%{'std' 'oddNoGo' 'oddGo'};
 
-params.src_density = '8'; % Sourcemodel density ('4', '8' or '32') = approximate number of sources per hemisphere
+params.src_density = '8'; % Sourcemodel density ('4', '8' or '32') = approximate number of sourmes per hemisphere
 params.source_fixedori = true; % use fixed orientation sources (along vertex normals); if false: use three orthogonal sources per location
 params.use_cov = 'resting_state'; % noise cov to use; default= ' ' for prestim, alt: 'resting_state', 'empty_room'
 
@@ -183,7 +183,7 @@ for i_sub = subs_to_run
             if overwrite.timelock == true || ~exist(fullfile(save_path, [params.paradigm '_timelocked.mat']),'file')
                 params.modality = 'opm';
                 params.layout = 'fieldlinebeta2bz_helmet.mat';
-                params.chs = '*bz';
+                params.chs = {'*by','*bz'};
                 params.amp_scaler = 1e15;
                 params.amp_label = 'B [fT]'; 
 

@@ -19,7 +19,7 @@ timelocked = cell(length(params.trigger_codes),1);
 if isfield(params,'trigger_codes') && isempty(params.trigger_codes)
     params.trigger_codes = num2cell(unique(data.trialinfo));
     for i = 1:length(params.trigger_codes)
-        params.trigger_labels{i} = num2str(params.trigger_codes(i));
+        params.trigger_labels{i} = num2str(params.trigger_codes{i});
     end
 end
 
@@ -81,7 +81,7 @@ for i_trigger = 1:length(params.trigger_codes)
     ax2.XTickLabel = [];
     ylabel('GFP')
     xlim([-params.pre params.post]*1e3);
-    saveas(h, fullfile(save_path, 'figs', [params.sub '_' params.modality '_' params.peaks{i_peak}.label '_butterfly_trig-' params.trigger_labels{i_trigger} '.jpg']))
+    saveas(h, fullfile(save_path, 'figs', [params.sub '_' params.modality '_butterfly_trig-' params.trigger_labels{i_trigger} '.jpg']))
     close all
 
     %% Plot selected channel
