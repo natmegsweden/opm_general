@@ -80,8 +80,8 @@ params.squid_std_threshold = 2.5e-12; % Stddev threshold for badtrial detection
 params.hpi_freq = 33; % HPI coil frequency
 params.hpi_gof = 0.9; % Minimum goodness-of-fit for including coil in hpi analysis
 
-params.trigger_codes = [];%{1 [3 11] [5 13]}; % combined oddball-nogo and oddball-go
-params.trigger_labels = [];%{'std' 'oddNoGo' 'oddGo'};
+params.trigger_codes = {};%{1 [3 11] [5 13]}; % combined oddball-nogo and oddball-go
+params.trigger_labels = {t;%{'std' 'oddNoGo' 'oddGo'};
 
 params.src_density = '8'; % Sourcemodel density ('4', '8' or '32') = approximate number of sources per hemisphere
 params.source_fixedori = true; % use fixed orientation sources (along vertex normals); if false: use three orthogonal sources per location

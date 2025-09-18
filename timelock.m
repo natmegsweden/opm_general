@@ -17,7 +17,7 @@ amp_scaler     = ft_getopt(params, 'amp_scaler', 1); % scaling factor used for f
 timelocked = cell(length(params.trigger_codes),1);
 
 if isfield(params,'trigger_codes') && isempty(params.trigger_codes)
-    params.trigger_codes = unique(data.trialinfo);
+    params.trigger_codes = num2cell(unique(data.trialinfo));
     for i = 1:length(params.trigger_codes)
         params.trigger_labels{i} = num2str(params.trigger_codes(i));
     end
@@ -69,7 +69,7 @@ for i_trigger = 1:length(params.trigger_codes)
     
     % Butterfly
     ax1 = axes('Position', [left, bottom + height_bottom + gap, width, height_top]);
-    plot(dat.time*1e3,timelocked{i_trigger}.avg*params.amp_scaler)
+    plot(timelocked{i_trigger}.time*1e3,timelocked{i_trigger}.avg*params.amp_scaler)
     xlabel('t [msec]')
     ylabel(params.amp_label)
     xlim([-params.pre params.post]*1e3);
