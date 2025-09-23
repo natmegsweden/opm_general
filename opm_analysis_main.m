@@ -51,20 +51,18 @@ params.delay = 0.01; % Stimulus delay in seconds (e.g., 0.01 for eartubes or 0.0
 params.filter = [];
 params.filter.hp_freq = 1; % Highpass cutoff frequency
 params.filter.lp_freq = 50; % Lowpass cutoff frequency
+params.filter.bp_freq = []; % Bandpass cutoff frequencies
 params.filter.notch = sort([50 60]); % Notch (bandstop) filter frequencies
 
 params.ds_freq = 1000; % Downsample frequency. If empty or not defined no downsampling will be applied
 
-params.apply_hfc = true; % Apply Homogenous Field Correction
-params.hfc_order = 3; % Order for Homogenous Field Correction: 1..3
-
 % Spatiotemporal filter (OPM-MEG only)
-params.do_hfc = true;
+params.do_hfc = false;
 params.hfc_order = 2;
-params.do_amm = false;
+params.do_amm = true;
 params.amm_in = 12;
-params.amm_out = 2;
-params.amm_thr = 1;
+params.amm_out = 3;
+params.amm_thr = 0.99;
 
 params.n_comp = 40; % Number of ICA components 
 params.manual_ica = false; % Manually select ICA components to remove?
@@ -80,8 +78,8 @@ params.squid_std_threshold = 2.5e-12; % Stddev threshold for badtrial detection
 params.hpi_freq = 33; % HPI coil frequency
 params.hpi_gof = 0.9; % Minimum goodness-of-fit for including coil in hpi analysis
 
-params.trigger_codes = {};%{1 [3 11] [5 13]}; % combined oddball-nogo and oddball-go
-params.trigger_labels = {};%{'std' 'oddNoGo' 'oddGo'};
+params.trigger_codes = [];%{1 [3 11] [5 13]}; % combined oddball-nogo and oddball-go
+params.trigger_labels = [];%{'std' 'oddNoGo' 'oddGo'};
 
 params.src_density = '8'; % Sourcemodel density ('4', '8' or '32') = approximate number of sourmes per hemisphere
 params.source_fixedori = true; % use fixed orientation sources (along vertex normals); if false: use three orthogonal sources per location
@@ -109,6 +107,10 @@ for i_sub = subs_to_run
     save_path = fullfile(base_save_path, params.sub);  
     if ~exist(save_path, 'dir')
        mkdir(save_path)
+    end
+    save_path_mri = fullfile(save_path, 'MRI');  
+    if ~exist(save_path_mri, 'dir')
+       mkdir(save_path_mri)
     end
     %% Loop over sessions
     for i_ses = 1:length(sessions(i_sub,:))
@@ -191,7 +193,7 @@ for i_sub = subs_to_run
                 save(fullfile(save_path, [params.paradigm '_timelocked']), 'timelocked', '-v7.3'); 
                 clear timelocked
             end
-            clear data_ica
+            clear data_ica1
     
             if squid
                 %% Read and preproc - SQUID-MAG

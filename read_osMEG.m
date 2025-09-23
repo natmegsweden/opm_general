@@ -68,11 +68,20 @@ if ~opm_only
     
     %% AUX data filter & epoch
     cfg = [];
-    cfg.lpfilter        = 'yes';         
-    cfg.lpfreq          = params.filter.lp_freq;
-    cfg.hpfilter        = 'yes'; 
-    cfg.hpfreq          = params.filter.hp_freq;
-    cfg.hpinstabilityfix  = 'reduce';
+    if isfield(params.filter,'hp_freq') && ~isempty(params.filter.hp_freq)
+        cfg.hpfilter        = 'yes';         
+        cfg.hpfreq          = params.filter.hp_freq;
+        cfg.hpinstabilityfix  = 'reduce';
+    end
+    if isfield(params.filter,'lp_freq') && ~isempty(params.filter.lp_freq)
+        cfg.lpfilter        = 'yes';         
+        cfg.lpfreq          = params.filter.lp_freq;
+    end
+    if isfield(params.filter,'bp_freq') && ~isempty(params.filter.bp_freq)
+        cfg.bpfilter        = 'yes';         
+        cfg.bpfreq          = params.filter.bp_freq;
+        cfg.bpinstabilityfix  = 'reduce';
+    end
     aux_epo = ft_preprocessing(cfg,aux_raw);
     
     cfg = [];
@@ -109,11 +118,20 @@ end
 
 %% OPM data filter & epoch
 cfg = [];
-cfg.lpfilter        = 'yes';         
-cfg.lpfreq          = params.filter.lp_freq;
-cfg.hpfilter        = 'yes';         
-cfg.hpfreq          = params.filter.hp_freq;
-cfg.hpinstabilityfix  = 'reduce';
+if isfield(params.filter,'hp_freq') && ~isempty(params.filter.hp_freq)
+    cfg.hpfilter        = 'yes';         
+    cfg.hpfreq          = params.filter.hp_freq;
+    cfg.hpinstabilityfix  = 'reduce';
+end
+if isfield(params.filter,'lp_freq') && ~isempty(params.filter.lp_freq)
+    cfg.lpfilter        = 'yes';         
+    cfg.lpfreq          = params.filter.lp_freq;
+end
+if isfield(params.filter,'bp_freq') && ~isempty(params.filter.bp_freq)
+    cfg.bpfilter        = 'yes';         
+    cfg.bpfreq          = params.filter.bp_freq;
+    cfg.bpinstabilityfix  = 'reduce';
+end
 opm_epo = ft_preprocessing(cfg, opm_raw);
 
 cfg = [];

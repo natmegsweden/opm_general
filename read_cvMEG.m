@@ -28,12 +28,19 @@ trl = round(trl);
 
 %% Data filter & epoch
 cfg = [];
-cfg.lpfilter        = 'yes';         
-cfg.lpfreq          = params.filter.lp_freq;
-if ~isempty(params.filter.hp_freq)
-    cfg.hpfilter        = 'yes'; 
+if isfield(params.filter,'hp_freq') && ~isempty(params.filter.hp_freq)
+    cfg.hpfilter        = 'yes';         
     cfg.hpfreq          = params.filter.hp_freq;
     cfg.hpinstabilityfix  = 'reduce';
+end
+if isfield(params.filter,'lp_freq') && ~isempty(params.filter.lp_freq)
+    cfg.lpfilter        = 'yes';         
+    cfg.lpfreq          = params.filter.lp_freq;
+end
+if isfield(params.filter,'bp_freq') && ~isempty(params.filter.bp_freq)
+    cfg.bpfilter        = 'yes';         
+    cfg.bpfreq          = params.filter.bp_freq;
+    cfg.bpinstabilityfix  = 'reduce';
 end
 data = ft_preprocessing(cfg, data_raw);
 clear data_raw
