@@ -49,9 +49,9 @@ params.pad = 0.2; % Trial (pre and post) padding in seconds
 params.delay = 0.01; % Stimulus delay in seconds (e.g., 0.01 for eartubes or 0.041 for membranes).
 
 params.filter = [];
-params.filter.hp_freq = 1; % Highpass cutoff frequency
-params.filter.lp_freq = 50; % Lowpass cutoff frequency
-params.filter.bp_freq = []; % Bandpass cutoff frequencies
+params.filter.hp_freq = [1]; % Highpass cutoff frequency
+params.filter.lp_freq = [50]; % Lowpass cutoff frequency
+%params.filter.bp_freq = [1 50]; % Bandpass cutoff frequencies
 params.filter.notch = sort([50 60]); % Notch (bandstop) filter frequencies
 
 params.ds_freq = 1000; % Downsample frequency. If empty or not defined no downsampling will be applied

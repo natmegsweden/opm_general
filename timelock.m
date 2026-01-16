@@ -108,6 +108,7 @@ for i_trigger = 1:length(params.trigger_codes)
         cfg.xlim = [params.plot_latency-0.010 params.plot_latency+0.010];
         cfg.layout = params.layout; 
         cfg.parameter = 'avg';
+        cfg.comment = 'no';
         h = figure;
         ft_topoplotER(cfg, timelocked{i_trigger});
         axis on

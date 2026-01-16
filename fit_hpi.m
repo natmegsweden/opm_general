@@ -49,7 +49,7 @@ for i_file = 1:length(hpi_files)
     hpi_labels2 = hpi_labels;
     hpi_trials = false(length(hpi_chs),length(epo.trial));
     for trl = 1:length(epo.trial)
-        hpi_trials(:,trl) = (max(epo.trial{trl}(hpi_chs,:),[],2)-min(epo.trial{trl}(hpi_chs,:),[],2))>1e-3;
+        hpi_trials(:,trl) = (max(epo.trial{trl}(hpi_chs,:),[],2)-min(epo.trial{trl}(hpi_chs,:),[],2))>1e-5;
     end
     
     for i = 1:length(hpi_chs)
